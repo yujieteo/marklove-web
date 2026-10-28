@@ -16,34 +16,43 @@ const FACES = [
     ["Courier Prime Sans", "CourierPrimeSans-Bold.woff2", "normal", "700"],
 ];
 
-function faceCSS(url) {
-    return FACES.map(([family, file, style, weight]) => {
-        const format = file.endsWith(".woff2") ? "woff2" : "opentype";
+// The laid-out pages (web/pages.js) also use Libre Baskerville for the slides.
+export const PAGE_FACES = [
+    ["Libre Baskerville", "LibreBaskerville-Variable.ttf", "normal", "400 700"],
+    ["Libre Baskerville", "LibreBaskerville-Italic-Variable.ttf", "italic", "400 700"],
+    ...FACES,
+];
+
+export function faceCSS(url, faces = FACES) {
+    return faces.map(([family, file, style, weight]) => {
+        const format = file.endsWith(".woff2") ? "woff2" : file.endsWith(".ttf") ? "truetype" : "opentype";
         return `@font-face{font-family:"${family}";src:url(${url(file)}) format("${format}");font-style:${style};font-weight:${weight};font-display:swap}\n`;
     }).join("");
 }
+
+export const fontURL = (f) => new URL("fonts/" + f, location.href).href;
 
 export async function loadParts() {
     const get = (p) => fetch(p).then((r) => { if (!r.ok) throw new Error(p); return r.text(); });
     [parts.style, parts.runtime, parts.articleStyle, parts.articleScript] =
         await Promise.all([get("style.css"), get("runtime.js"), get("article.css"), get("article.js")]);
     // The preview loads the fonts from the app folder: a short style sheet.
-    parts.fonts = faceCSS((f) => new URL("fonts/" + f, location.href).href);
+    parts.fonts = faceCSS(fontURL);
 }
 
 // The fonts as data: URLs, so that an exported file works offline (HTMLExporter.fontFaces).
-let embedded = null;
-export async function embeddedFonts() {
-    if (embedded) return embedded;
+const embedded = new Map();
+export async function embeddedFonts(faces = FACES) {
+    if (embedded.has(faces)) return embedded.get(faces);
     const urls = {};
-    for (const [, file] of FACES) {
+    for (const [, file] of faces) {
         const blob = await (await fetch("fonts/" + file)).blob();
-        const mime = file.endsWith(".woff2") ? "font/woff2" : "font/otf";
+        const mime = file.endsWith(".woff2") ? "font/woff2" : file.endsWith(".ttf") ? "font/ttf" : "font/otf";
         const b64 = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.readAsDataURL(blob); });
         urls[file] = `data:${mime};base64,${b64}`;
     }
-    embedded = faceCSS((f) => urls[f]);
-    return embedded;
+    embedded.set(faces, faceCSS((f) => urls[f], faces));
+    return embedded.get(faces);
 }
 
 // A document for the core.

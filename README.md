@@ -2,13 +2,13 @@
 
 Marklove for the web. You write one Markdown file, and Marklove makes slides, an article, an EPUB book, subtitles, narration text and packages from it.
 
-This is a port of the Marklove app for iPhone, iPad and Mac. The core is in [Goose](https://aardappel.github.io/), compiled to C and then to WebAssembly. The core does the parse, the checks, the render to HTML and MathML, the plots, the themes, find and replace, sam and Vim, the ZIP files and the Git history. JavaScript does only the page, the browser storage and the browser APIs.
+This is a port of the Marklove app for iPhone, iPad and Mac. The core is in [Goose](https://aardappel.github.io/), compiled to C and then to WebAssembly. The core does the parse, the checks, the render to HTML and MathML, the plots, the themes, find and replace, sam and Vim, the ZIP files and the Git history. The core also lays out the PDF pages, the slide images and the video frames as SVG, traces the SVG slides, makes the video timeline and writes the MP4 file. JavaScript does only the page, the browser storage and the browser APIs: canvas, WebCodecs, MediaRecorder and the speech model.
 
 All features are free. The web version has no subscription, no purchase and no Pro features.
 
 ## Use
 
-The `web/` folder is a static site. It needs no server code and no network after it loads. Copy the folder to any path on a web server, for example `/play/marklove/`, and open `index.html`.
+The `web/` folder is a static site. It needs no server code and no network after it loads. The Kokoro voice is the exception: Settings downloads it (about 90 MB), and the browser keeps it. Narration also needs the network to get kokoro-js from jsDelivr. Copy the folder to any path on a web server, for example `/play/marklove/`, and open `index.html`.
 
 To try it on your computer:
 
@@ -62,18 +62,26 @@ The tests use the built core through `web/core.js`. The project ZIP test also ru
 | `core/edit.goose`, `core/vim.goose` | Find and replace, sam commands, the line difference, commit messages, and Vim mode. |
 | `core/pack.goose`, `core/gitexport.goose` | ZIP files, the project import, and the Git history. |
 | `core/extras.goose` | The equation at the cursor, spoken math, the tour, the prompts and the listener text. |
-| `core/io.h` | The input buffers and the memory for the Goose data stacks. |
+| `core/layout.goose`, `core/pagesvg.goose` | The page layout of the slides, the video, the article, the handout and the poster, and each page as SVG. |
+| `core/trace.goose` | Raster pixels to SVG shapes, for the SVG slide export. |
+| `core/video.goose` | The video timeline, the podcast timing and the MP4 file. |
+| `core/io.h` | The input buffers, the memory for the Goose data stacks, and the text and math measurement in the browser. |
 | `web/core.js` | The JavaScript interface to the core. |
-| `web/index.html`, `web/app.js`, `web/app.css`, `web/print.css` | The app page, its start, its styles and the print pages. |
+| `web/index.html`, `web/app.js`, `web/app.css` | The app page, its start and its styles. |
 | `web/store.js`, `web/ui.js`, `web/editor.js`, `web/find.js`, `web/preview.js`, `web/export.js`, `web/panels.js` | The app parts: storage and settings, controls, the editor, Find and Vim, the preview and presentation, export, and the other panels. |
+| `web/pages.js`, `web/video.js`, `web/voice.js` | The PDF pages, the PNG and SVG slides, the video and audio encoders, and the Kokoro voice. |
 | `web/demo-peafowl.png` | The photo of the tour project. |
 | `web/style.css`, `web/runtime.js`, `web/article.css`, `web/article.js` | The parts of the exported pages, the same as in Marklove. |
-| `web/fonts/` | Courier Prime, Courier Prime Sans and KpMath, with their licenses (SIL Open Font License). |
+| `web/fonts/` | Courier Prime, Courier Prime Sans, Libre Baskerville and KpMath, with their licenses (SIL Open Font License). |
+
+The Kokoro voice uses the web version of [kokoro-js](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) 1.2.1 from jsDelivr. It runs the Kokoro-82M ONNX model (`onnx-community/Kokoro-82M-v1.0-ONNX`, q8) from Hugging Face. Both are under the Apache License 2.0.
 
 ## Limits
 
 - The Markdown file can have a maximum size of 512 KB. Each Goose data stack has a fixed 8 MB in WebAssembly, and WebAssembly has no guard pages. Thus the core refuses a larger source, so that a stack cannot overwrite other data. The same limit applies to each text that goes into the core, and to each result of Find, Replace, sam, Vim substitution and Vim put. Find and sam keep a maximum of 100000 matches. Marklove does not keep a text that is larger than 512 KB as a version. A long talk is less than 100 KB.
-- Photos, videos and audio stay in JavaScript as Blobs. They never go into the core. The core writes the ZIP and Git entries for them, and JavaScript adds the bytes.
+- Photos, videos and audio stay in JavaScript as Blobs. They never go into the core. The core writes the ZIP and Git entries for them, and JavaScript adds the bytes. The same applies to the encoded video and audio samples: the core writes the MP4 header, and JavaScript adds the samples.
+- The SVG export traces regions with millions of pixels. The core keeps the arrays for these pixels in the C heap, not in a data stack.
+- Encoders: browsers encode AAC only at 44.1 or 48 kHz, so the 24 kHz voice is encoded at 48 kHz. Without AAC, the audio is Opus in the MP4 file. Without WebCodecs, MediaRecorder records the video or the podcast in real time as WebM.
 
 ## Feature parity
 
@@ -99,10 +107,10 @@ The tests use the built core through `web/core.js`. The project ZIP test also ru
 | Export: interactive web page, article web page, EPUB | Yes. |
 | Export: article Markdown, revised Markdown, narration script, transcript, subtitles, prompt text | Yes. |
 | Export: presenter ZIP, listener ZIP, project ZIP with `.git` | Yes. |
-| Export: slides PDF, article PDF, handout, poster | Partly. The browser print dialog makes the PDF from the web page. Marklove draws its PDF pages with CoreText and PDFKit, which only Apple platforms have. Thus the pages are not the same as in the app. |
-| Export: slides as PNG images or SVG files | Not possible on the web. Marklove draws these pages with CoreText and CoreGraphics, which only Apple platforms have. |
-| Export: video, narrated video, math animation video, podcast | Not possible on the web. These need AVFoundation to encode the video and audio, and Kokoro narration. |
-| Narration voice (Kokoro on the device) | Not possible on the web. The voice is a 333 MB Core ML model, and Core ML runs only on Apple platforms. |
+| Export: slides PDF, article PDF, handout, poster | Yes. The core lays out the pages as the app does, and the browser print dialog saves them as PDF. The browser measures the text with the same fonts. |
+| Export: slides as PNG images or SVG files | Yes. A canvas draws the PNG images. For SVG, the core traces the text, photos, equations and plots into vector shapes, as the app does. |
+| Export: video, narrated video, math animation video, podcast | Yes. WebCodecs encodes H.264 and AAC, and the core writes the MP4 file. Without WebCodecs, MediaRecorder makes a WebM file. |
+| Narration voice (Kokoro on the device) | Yes. The voice is the kokoro-js web version of Kokoro-82M. It runs in the browser. The web version has 28 English voices. For a voice that it does not have, it uses `af_heart`. |
 | iCloud sync and merge between devices | Not possible on the web. iCloud Drive is available only to apps on Apple platforms. |
 | Command line tool and Shortcuts actions | Not possible on the web. A web page cannot add a command to Terminal or to the Shortcuts app. |
 | VoiceOver rotors, Dynamic Type, Bold Text | Not possible on the web. These are Apple system features. The web page uses the zoom, the screen reader and the reduced motion setting of the browser. |
