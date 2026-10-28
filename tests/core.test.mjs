@@ -82,7 +82,56 @@ test("themes", () => {
 });
 
 test("too large source", () => {
-    assert.throws(() => C.page({ source: "x".repeat(C.MAX_SOURCE_BYTES + 1) }, 0, 0), C.TooLarge);
+    const big = "x".repeat(C.MAX_SOURCE_BYTES + 1);
+    assert.throws(() => C.page({ source: big }, 0, 0), C.TooLarge);
+    assert.throws(() => C.find(big, "x", "plain", false), C.TooLarge);
+    assert.throws(() => C.highlightMarkdown(big), C.TooLarge);
+    assert.throws(() => C.vimKey(big, 0, 0, "x"), C.TooLarge);
+    assert.throws(() => C.diff("", big), C.TooLarge);
+    assert.match(C.page({ ...doc, fonts: "/*" + big + "*/" }, C.PAGE_SLIDES, 0), /<title>Waves<\/title>/);
+});
+
+test("ZIP with a too large Markdown file", async () => {
+    C.zipBegin();
+    C.zipAdd("talk.md", "x".repeat(C.MAX_SOURCE_BYTES - 1), T);
+    const parts = [C.zipTake(), C.zipFinish()];
+    const ok = await C.packImport(new Blob(parts));
+    assert.equal(ok.markdown.length, C.MAX_SOURCE_BYTES - 1);
+    // The same ZIP, with a size of 512 KB + 1 in the headers of the entry.
+    const z = new Uint8Array(await new Blob(parts).arrayBuffer());
+    const v = new DataView(z.buffer);
+    for (let i = 0; i + 4 <= z.length; i++) {
+        const sig = v.getUint32(i, true);
+        if (sig === 0x04034B50) v.setUint32(i + 22, C.MAX_SOURCE_BYTES + 1, true);
+        if (sig === 0x02014B50) v.setUint32(i + 24, C.MAX_SOURCE_BYTES + 1, true);
+    }
+    assert.match((await C.packImport(new Blob([z]))).error, /larger than 512 KB/);
+});
+
+test("Find, Replace and sam stop at too many matches or a too large result", () => {
+    const t = "a".repeat(200000);
+    for (const syntax of ["sam", "plain", "vim"]) {
+        assert.match(C.find(t, "a", syntax, false).error, /too many matches/);
+        assert.match(C.replace("a".repeat(1000), "a", "b".repeat(1000), syntax, false, 0, 0, true).error, /larger than 512 KB/);
+    }
+    assert.equal(C.find("a".repeat(1000), "a", "plain", false).matches.length, 1000);
+    assert.match(C.sam(",x/a/d", t, 0, 0, false).error, /too many matches/);
+    assert.match(C.sam(",x/a/,p", "a".repeat(1000), 0, 0, false).error, /larger than 512 KB/);
+    assert.match(C.sam(",t$\n,t$\n,t$", "a".repeat(100000), 0, 0, false).error, /larger than 512 KB/);
+    assert.match(C.replace("aaaa", "a*", "&".repeat(400000), "sam", false, 0, 0, true).error, /larger than 512 KB/);
+});
+
+test("Vim \"+p puts the system clipboard", () => {
+    C.vimReset();
+    C.vimClipboard("clip");
+    let t = "ab";
+    let sel = [0, 0];
+    for (const k of ['"', "+", "p"]) {
+        const r = C.vimKey(t, sel[0], sel[1], k);
+        if (r.text !== null && r.text !== undefined) t = r.text;
+        sel = r.sel;
+    }
+    assert.equal(t, "aclipb");
 });
 
 test("project ZIP with Git history and import", async () => {

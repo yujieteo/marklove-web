@@ -197,7 +197,10 @@ const SYNTAX = [
 export function helpPanel(app) {
     let includeSelection = false;
     const copyBtn = (label, make) => {
-        const b = h("button", { type: "button", class: "btn", onclick: async () => { await copyText(make()); b.textContent = "Copied"; announce("Copied"); } }, label);
+        const b = h("button", { type: "button", class: "btn", onclick: async () => {
+            try { await copyText(make()); } catch (e) { announce(e.message); return; }
+            b.textContent = "Copied"; announce("Copied");
+        } }, label);
         return b;
     };
     const body = h("div", {},

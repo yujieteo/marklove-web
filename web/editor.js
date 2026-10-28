@@ -11,7 +11,7 @@ export const editor = {
     ta: null, pre: null, box: null, placeholder: null,
     onChange: () => {}, onSelect: () => {}, onVimAction: () => {}, onVimState: () => {},
     boldRoles: new Set(), italicRoles: new Set(),
-    vim: false, vimMode: "normal", vimStatus: "", vimCursor: -1,
+    vim: false, vimMode: "normal", vimStatus: "", vimCursor: -1, vimPrevKey: "", vimClipReg: false,
     findHits: [], readOnly: false,
 };
 
@@ -397,13 +397,50 @@ function vimKeydown(e) {
     if (!key) return;
     // Insert mode: typed text and the line keys go to the text area.
     if (editor.vimMode === "insert" && key !== "Escape" && !key.startsWith("Ctrl-")) return;
+    // "+ and "* name the system clipboard: p and P read it first.
+    const prev = editor.vimPrevKey;
+    editor.vimPrevKey = key;
+    if (editor.vimMode === "command") editor.vimClipReg = false;
+    else if (prev === '"' && (key === "+" || key === "*")) editor.vimClipReg = true;
+    else if (editor.vimClipReg && (key === "p" || key === "P")) {
+        editor.vimClipReg = false;
+        e.preventDefault();
+        e.stopPropagation();
+        clipboardKey(key);
+        return;
+    } else if (!/^[0-9]$/.test(key)) editor.vimClipReg = false;
+    if (runVimKey(key)) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+}
+
+async function clipboardKey(key) {
+    let clip = "";
+    try { clip = await navigator.clipboard.readText(); } catch { /* no permission: the register is empty */ }
+    try { C.vimClipboard(clip); } catch (err) { vimMessage(err.message); return; }
+    runVimKey(key);
+}
+
+// Returns true when the key had an effect in Vim.
+function runVimKey(key) {
     const t = editor.ta.value;
     const [s16, e16] = selection();
-    const r = C.vimKey(t, C.utf8Offset(t, s16), C.utf8Offset(t, e16), key);
-    if (!r.handled) return;
-    e.preventDefault();
-    e.stopPropagation();
+    let r;
+    try { r = C.vimKey(t, C.utf8Offset(t, s16), C.utf8Offset(t, e16), key); }
+    catch (err) {
+        if (!(err instanceof C.TooLarge)) throw err;
+        vimMessage(err.message);
+        return true;
+    }
+    if (!r.handled) return false;
     applyVim(r);
+    return true;
+}
+
+function vimMessage(m) {
+    editor.vimStatus = m;
+    editor.onVimState();
 }
 
 function applyVim(r) {

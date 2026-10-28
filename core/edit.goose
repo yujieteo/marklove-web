@@ -44,6 +44,15 @@ fn ed_failed() -> bool { ED_ERR.len > 0 }
 
 fn ed_fail(msg: u8[:]) { if ED_ERR.len == 0 { ED_ERR.append(msg); } }
 
+fn ed_too_large() { ed_fail("The result is larger than 512 KB. Make a smaller change."); }
+
+// ED_S holds 8-byte code points, so it stays far below one data stack.
+fn ed_room(n: i64) -> bool {
+    if ED_S.len + n <= 3 * MAX_TEXT / 2 { return true; }
+    ed_too_large();
+    return false;
+}
+
 // A message with up to three code points or numbers put in: a c1 b c2 d c3 e.
 // A code point < 0 is not written.
 fn ed_fail_c(a: u8[:], c1: i64, b: u8[:], c2: i64, d: u8[:], c3: i64, e: u8[:]) {
@@ -650,6 +659,7 @@ fn rx_all(r: i64, lo: i64, hi: i64) -> i64, i64 {
             p = s + 1;
             continue;
         }
+        if RX_ML.len - mark + slots > 2 * MAX_MATCHES { ed_fail("There are too many matches. Use a longer pattern."); break; }
         for k in slots { let v = RX_M[k]; RX_ML.push(v); }
         n++;
         last_end = e;
@@ -665,8 +675,10 @@ fn rx_all(r: i64, lo: i64, hi: i64) -> i64, i64 {
 fn rx_expand(ro: i64, rn: i64, mo: i64, groups: i64) {
     var i = 0;
     while i < rn {
+        if !ed_room(1) { return; }
         let c = ED_S[ro + i];
         if c == '&' {
+            if !ed_room(RX_ML[mo + 1] - RX_ML[mo]) { return; }
             for p in RX_ML[mo]..RX_ML[mo + 1] { let v = ED_CP[p]; ED_S.push(v); }
         } else if c == '\\' && i + 1 < rn {
             let n = ED_S[ro + i + 1];
@@ -676,7 +688,10 @@ fn rx_expand(ro: i64, rn: i64, mo: i64, groups: i64) {
                 if d <= groups {
                     let s = RX_ML[mo + 2 * d];
                     let e = RX_ML[mo + 2 * d + 1];
-                    if s >= 0 && e >= s { for p in s..e { let v = ED_CP[p]; ED_S.push(v); } }
+                    if s >= 0 && e >= s {
+                        if !ed_room(e - s) { return; }
+                        for p in s..e { let v = ED_CP[p]; ED_S.push(v); }
+                    }
                 }
             } else if n == 'n' {
                 ED_S.push('\n');
@@ -714,6 +729,7 @@ fn edit_find(out: u8[>..]&, text: u8[:], pattern: u8[:], plain: bool, ignore_cas
     let r = rx_get(ignore_case);
     if r < 0 { ed_error_json(out); return; }
     let mark, n = rx_all(r, 0, ED_CP.len);
+    if ed_failed() { ed_error_json(out); return; }
     let slots = 2 * (RXS[r].groups + 1);
     out.append("{\"matches\":[");
     for i in n {
@@ -738,6 +754,7 @@ fn edit_replace(out: u8[>..]&, text: u8[:], pattern: u8[:], plain: bool, ignore_
     each_utf8(replacement) { ED_S.push(it); };
     let rn = ED_S.len - ro;
     let mark, n = rx_all(r, 0, ED_CP.len);
+    if ed_failed() { ed_error_json(out); return; }
     var result: u8[>..] = [];
     var cursor = 0;
     var count = 0;
@@ -759,10 +776,13 @@ fn edit_replace(out: u8[>..]&, text: u8[:], pattern: u8[:], plain: bool, ignore_
         caret = result.len;
         cursor = e;
         count++;
+        if ed_failed() || result.len > MAX_TEXT { break; }
         if !all { break; }
     }
     if count == 0 { out.append("{\"count\":0}"); return; }
     result.append(text[cursor..]);
+    if result.len > MAX_TEXT { ed_too_large(); }
+    if ed_failed() { ed_error_json(out); return; }
     format(out, "{\"count\":", count, ",\"text\":");
     json_str(out, result);
     if !all { format(out, ",\"selection\":[", caret, ",", caret, "]"); }
@@ -1294,10 +1314,17 @@ fn sm_resolve(ai: i64, d0: i64, d1: i64) -> i64, i64 {
 
 // --- sam commands ----------------------------------------------------------
 
-fn sm_edit(s: i64, e: i64, o: i64, n: i64) { SM_E.push(SmE { s: s, e: e, o: o, n: n, idx: SM_E.len }); }
+fn sm_edit(s: i64, e: i64, o: i64, n: i64) {
+    if SM_E.len >= MAX_MATCHES { ed_fail("There are too many changes. Make them in separate commands."); return; }
+    SM_E.push(SmE { s: s, e: e, o: o, n: n, idx: SM_E.len });
+}
 
 fn sm_print_start() -> i64 { SM_PB.len }
-fn sm_print_end(o: i64) { SM_PS.push(o); SM_PS.push(SM_PB.len - o); }
+fn sm_print_end(o: i64) {
+    SM_PS.push(o);
+    SM_PS.push(SM_PB.len - o);
+    if SM_PB.len > MAX_TEXT { ed_too_large(); }
+}
 
 recursive fn sm_run(ci: i64, dot0: i64, dot1: i64) -> i64, i64 {
     let c = SM_C[ci];
@@ -1373,6 +1400,7 @@ recursive fn sm_run(ci: i64, dot0: i64, dot1: i64) -> i64, i64 {
                 rx_expand(c.to, c.tn, mo, groups);
                 sm_edit(RX_ML[mo], RX_ML[mo + 1], o, ED_S.len - o);
                 chosen++;
+                if ED_ERR.len > 0 { return 0, 0; }
             }
         }
         RX_ML.resize(mark);
@@ -1387,6 +1415,7 @@ recursive fn sm_run(ci: i64, dot0: i64, dot1: i64) -> i64, i64 {
         let t0, t1 = sm_resolve(c.target, d0, d1);
         if ED_ERR.len > 0 { return 0, 0; }
         if k == C_MOVE && t1 > d0 && t1 < d1 { ed_fail("The text cannot move into itself."); return 0, 0; }
+        if !ed_room(d1 - d0) { return 0, 0; }
         let o = ED_S.len;
         for i in d0..d1 { let v = ED_CP[i]; ED_S.push(v); }
         sm_edit(t1, t1, o, d1 - d0);
@@ -1394,6 +1423,7 @@ recursive fn sm_run(ci: i64, dot0: i64, dot1: i64) -> i64, i64 {
         return d0, d1;
     }
     if k == C_PRINT {
+        if SM_PB.len + (d1 - d0) > MAX_TEXT { ed_too_large(); return 0, 0; }
         let o = sm_print_start();
         ed_put_text(SM_PB, d0, d1);
         sm_print_end(o);
@@ -1433,6 +1463,9 @@ fn sm_run_one(ci: i64, s0: i64, s1: i64) -> i64, i64, i64 {
         if SM_E[i].s < SM_E[i - 1].e { ed_fail("Two changes overlap. Make the changes in separate commands."); return 0, 0, 0; }
     }
     if SM_E.len == 0 { return d0, d1, 0; }
+    var size = ED_CP.len;
+    for e in SM_E { size += e.n - (e.e - e.s); }
+    if size > MAX_TEXT { ed_too_large(); return 0, 0, 0; }
     SM_NEW.clear();
     var p = 0;
     var new_start = -1;

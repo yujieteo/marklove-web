@@ -15,8 +15,9 @@ export const LIST_LISTENER_MD = 0, LIST_PUBLIC_ASSETS = 1, LIST_PRIVATE_ASSETS =
     LIST_REVISION_PROMPT = 3;
 
 // The core keeps each value in a data stack of 8 MB with no guard page
-// (see core/io.h), so a larger source could overwrite other data. A source
-// of this size is far larger than a long talk or article.
+// (see core/io.h), so a larger text could overwrite other data. A source
+// of this size is far larger than a long talk or article. Each text input
+// has this limit.
 export const MAX_SOURCE_BYTES = 512 * 1024;
 export class TooLarge extends Error {}
 
@@ -31,8 +32,14 @@ export async function load() {
 }
 
 function put(inputs) {
-    inputs.forEach((v, i) => {
-        const b = typeof v === "string" ? encoder.encode(v) : v;
+    const all = inputs.map((v) => {
+        if (typeof v !== "string") return v;
+        const b = encoder.encode(v);
+        if (b.length > MAX_SOURCE_BYTES)
+            throw new TooLarge("The Markdown file is larger than 512 KB. Split it into more projects.");
+        return b;
+    });
+    all.forEach((b, i) => {
         const p = M._ml_in_alloc(i, b.length);
         M.HEAPU8.set(b, p);
     });
@@ -54,11 +61,12 @@ function plain(name, inputs, ...ints) {
 }
 
 // A document: the source, the assets ({path: url}) and the page parts.
+// The page parts come from the app, not from the user, so they go in as
+// bytes, with no limit: the embedded fonts are larger than 512 KB.
 function docArgs(d) {
-    if (encoder.encode(d.source).length > MAX_SOURCE_BYTES)
-        throw new TooLarge("The Markdown file is larger than 512 KB. Split it into more projects.");
     const assets = Object.entries(d.assets || {}).map(([k, v]) => k + "\t" + v + "\n").join("");
-    return [d.source, assets, d.fonts || "", d.style || "", d.script || "", d.appearance || ""];
+    const part = (t) => encoder.encode(t || "");
+    return [d.source, assets, part(d.fonts), part(d.style), part(d.script), d.appearance || ""];
 }
 
 export const page = (d, kind, opts) => text("ml_page", docArgs(d), kind, opts);
@@ -91,7 +99,6 @@ export const themePalette = (theme, accent, dark, moreContrast) =>
     json("ml_theme_palette", [theme, accent], dark ? 1 : 0, moreContrast ? 1 : 0);
 export const typography = () => json("ml_typography", []);
 
-export const highlight = (code, lang) => text("ml_highlight", [code, lang]);
 export const highlightMarkdown = (source) => json("ml_highlight_md", [source]);
 
 // Editing. The offsets are UTF-8 bytes: see utf8Offset and utf16Offset.
@@ -107,6 +114,7 @@ export const diff = (a, b) => json("ml_diff", [a, b]);
 export const commitMessage = (a, b) => text("ml_commit_message", [a, b]);
 
 export const vimReset = () => plain("ml_vim_reset", []);
+// The system clipboard text, for the "+ and "* registers.
 export const vimClipboard = (t) => plain("ml_vim_clipboard", [t]);
 export const vimKey = (t, selS, selE, key) => json("ml_vim_key", [t, key], selS, selE);
 
@@ -114,7 +122,6 @@ export const vimKey = (t, selS, selE, key) => json("ml_vim_key", [t, key], selS,
 // JavaScript: zipAddBlob gives the parts to put into the final Blob.
 export const zipBegin = () => plain("ml_zip_begin", []);
 export const zipAdd = (name, data, mtime) => plain("ml_zip_add", [name, data], mtime);
-export const zipAddDir = (name, mtime) => plain("ml_zip_add_dir", [name], mtime);
 export const zipTake = () => bytes("ml_zip_take", []);
 export const zipFinish = () => bytes("ml_zip_finish", []);
 

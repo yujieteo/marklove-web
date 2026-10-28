@@ -239,12 +239,6 @@ export fn ml_typography() -> const u8[:] {
     return done();
 }
 
-export fn ml_highlight() -> const u8[:] {
-    R.clear();
-    highlight_html(R, arg(0), arg(1));
-    return done();
-}
-
 export fn ml_highlight_md() -> const u8[:] {
     R.clear();
     highlight_markdown(R, arg(0));
@@ -291,8 +285,6 @@ export fn ml_commit_message() -> const u8[:] {
 export fn ml_zip_begin() { zip_begin(); }
 
 export fn ml_zip_add(mtime: f64) -> i32 { zip_add(arg(0), arg(1), mtime as i64) as i32 }
-
-export fn ml_zip_add_dir(mtime: f64) -> i32 { zip_add_dir(arg(0), mtime as i64) as i32 }
 
 // A file whose bytes stay in JavaScript. Returns the archive bytes to write
 // before them, or nothing when the name is not valid or already there.

@@ -19,6 +19,11 @@ var S: u8[>..] = [];
 // The output of the current call.
 var OUT: u8[>..] = [];
 
+// The largest text that the core takes or makes, and the most matches that
+// Find and sam keep. A data stack holds 8 MB with no guard page (see io.h).
+let MAX_TEXT = 512 * 1024;
+let MAX_MATCHES = 100000;
+
 fn sp_text(sp: Span) -> u8[:] { S[sp.o..sp.o + sp.n] }
 
 fn sp_add(t: u8[:]) -> Span {

@@ -664,6 +664,11 @@ fn pack_import(z: u8[:], out: u8[>..]&) {
         pk_error_json(out, m);
         return;
     }
+    let me = PK_ENTS[md];
+    if me.usize > MAX_TEXT || (me.method == 0 && me.csize > MAX_TEXT) {
+        pk_error_json(out, "The Markdown file is larger than 512 KB. Split it into more projects.");
+        return;
+    }
     var text: u8[>..] = [];
     if !pk_contents(z, md, text) { pk_zip_error(out); return; }
     if !pk_valid_utf8(text) {

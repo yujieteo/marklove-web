@@ -301,7 +301,7 @@ async function saveVersion({ explicit = false, message = "" } = {}) {
     const all = await S.versions(p.id);
     const last = all[0];
     const paths = Object.keys(state.assets).sort();
-    const same = last && last.markdown === p.markdown && (last.assets || []).length === paths.length;
+    const same = last && last.markdown === p.markdown && (last.assets || []).slice().sort().join("\n") === paths.join("\n");
     if (same && !message) { if (explicit) announce("Saved. No changes since the last version."); return false; }
     let msg = message;
     if (!msg) {

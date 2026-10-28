@@ -1294,6 +1294,7 @@ fn vre_expand(out: u8[>..]&, tmpl: u8[:], prev: u8[:], has_prev: bool) {
     var run = 0;
     var piece: u8[>..] = [];
     fn add(s: u8[:]) {
+        if out.len > MAX_TEXT { return; }
         var i = 0;
         while i < s.len {
             var c, l = vm_cp_at(s, i);
@@ -2645,6 +2646,11 @@ fn vm_substitute(spec: u8[:], lo: i64, hi: i64) -> i64 {
         if !global && seen_line == line { continue; }
         piece.clear();
         vre_expand(piece, rep, prev, has_prev);
+        if count >= MAX_MATCHES || VEDB.len + piece.len > MAX_TEXT {
+            VED.resize(ed0);
+            vm_msg("The change is too large. Make a smaller change.");
+            return SUB_MSG;
+        }
         ed_add(ms, VRM_E, piece);
         count++;
         if seen_line != line { lines++; }
@@ -3026,9 +3032,15 @@ fn vim_find(out: u8[>..]&, text: u8[:], pattern: u8[:], ignore_case: bool) {
     var m: u8[>..] = [];
     let n = VCH.len;
     var pos = 0;
+    var count = 0;
     while pos <= n {
         if !vre_find(0, n, pos) { break; }
         pos = vre_next_pos();
+        count++;
+        if count > MAX_MATCHES {
+            out.append("{\"error\":\"There are too many matches. Use a longer pattern.\"}");
+            return;
+        }
         if m.len > 0 { m.push(','); }
         format(m, "[", VOFF[VRM_S], ",", VOFF[VRM_E], "]");
     }
@@ -3062,14 +3074,19 @@ fn vim_replace(out: u8[>..]&, text: u8[:], pattern: u8[:], ignore_case: bool,
         caret = result.len;
         cursor = e;
         count++;
+        if result.len > MAX_TEXT { break; }
         if !all { break; }
     }
     if VRE_OVER { vf_too_complex(out); return; }
     if count == 0 { out.append("{\"count\":0}"); return; }
+    result.append(text[cursor..]);
+    if result.len > MAX_TEXT {
+        out.append("{\"error\":\"The result is larger than 512 KB. Make a smaller change.\"}");
+        return;
+    }
     VFIND_REP.clear();
     VFIND_REP.append(replacement);
     VFIND_REP_SET = true;
-    result.append(text[cursor..]);
     format(out, "{\"count\":", count, ",\"text\":");
     json_str(out, result);
     if !all { format(out, ",\"selection\":[", caret, ",", caret, "]"); }
