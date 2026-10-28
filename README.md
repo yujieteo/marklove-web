@@ -72,7 +72,7 @@ The tests use the built core through `web/core.js`. The project ZIP test also ru
 
 ## Limits
 
-- The Markdown file can have a maximum size of 512 KB. Each Goose data stack has a fixed 8 MB in WebAssembly, and WebAssembly has no guard pages. Thus the core refuses a larger source, so that a stack cannot overwrite other data. The same limit applies to each text that goes into the core, and to each result of Find, Replace, sam and Vim substitution. Find and sam keep a maximum of 100000 matches. A long talk is less than 100 KB.
+- The Markdown file can have a maximum size of 512 KB. Each Goose data stack has a fixed 8 MB in WebAssembly, and WebAssembly has no guard pages. Thus the core refuses a larger source, so that a stack cannot overwrite other data. The same limit applies to each text that goes into the core, and to each result of Find, Replace, sam, Vim substitution and Vim put. Find and sam keep a maximum of 100000 matches. Marklove does not keep a text that is larger than 512 KB as a version. A long talk is less than 100 KB.
 - Photos, videos and audio stay in JavaScript as Blobs. They never go into the core. The core writes the ZIP and Git entries for them, and JavaScript adds the bytes.
 
 ## Feature parity
