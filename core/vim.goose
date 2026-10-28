@@ -1851,6 +1851,12 @@ fn vm_put(after: bool, cursor: i64, n: i64) {
         t.append(VUN);
     }
     if t.len == 0 { vm_clear_pending(); VREC.clear(); return; }
+    if n > (MAX_TEXT - VTXT.len) / t.len {
+        vm_clear_pending();
+        VREC.clear();
+        vm_msg("The text would be larger than 512 KB. Put less text.");
+        return;
+    }
     var content: u8[>..] = [];
     for _ in n { content.append(t); }
     vm_finish_change();

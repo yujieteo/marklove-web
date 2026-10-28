@@ -158,7 +158,7 @@ async function newProject() {
 }
 
 async function firstVersion(p, message) {
-    if (!S.settings.gitEnabled) return;
+    if (!S.settings.gitEnabled || tooLarge(p.markdown)) return;
     const assets = await S.assetBlobs(p.id);
     await S.addVersion({ project: p.id, time: Date.now(), message, markdown: p.markdown, assets: Object.keys(assets) });
 }
@@ -298,6 +298,7 @@ async function saveVersion({ explicit = false, message = "" } = {}) {
     if (!p || readOnly()) return false;
     await flushSave();
     if (!S.settings.gitEnabled) { if (explicit) announce("Saved. Versions are off in Settings."); return false; }
+    if (tooLarge(p.markdown)) { if (explicit) announce("The Markdown file is larger than 512 KB. Split it into more projects."); return false; }
     const all = await S.versions(p.id);
     const last = all[0];
     const paths = Object.keys(state.assets).sort();

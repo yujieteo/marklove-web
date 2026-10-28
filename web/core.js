@@ -36,7 +36,7 @@ function put(inputs) {
         if (typeof v !== "string") return v;
         const b = encoder.encode(v);
         if (b.length > MAX_SOURCE_BYTES)
-            throw new TooLarge("The Markdown file is larger than 512 KB. Split it into more projects.");
+            throw new TooLarge("The text is larger than 512 KB.");
         return b;
     });
     all.forEach((b, i) => {
@@ -64,6 +64,8 @@ function plain(name, inputs, ...ints) {
 // The page parts come from the app, not from the user, so they go in as
 // bytes, with no limit: the embedded fonts are larger than 512 KB.
 function docArgs(d) {
+    if (encoder.encode(d.source).length > MAX_SOURCE_BYTES)
+        throw new TooLarge("The Markdown file is larger than 512 KB. Split it into more projects.");
     const assets = Object.entries(d.assets || {}).map(([k, v]) => k + "\t" + v + "\n").join("");
     const part = (t) => encoder.encode(t || "");
     return [d.source, assets, part(d.fonts), part(d.style), part(d.script), d.appearance || ""];

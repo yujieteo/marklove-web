@@ -83,7 +83,8 @@ test("themes", () => {
 
 test("too large source", () => {
     const big = "x".repeat(C.MAX_SOURCE_BYTES + 1);
-    assert.throws(() => C.page({ source: big }, 0, 0), C.TooLarge);
+    assert.throws(() => C.page({ source: big }, 0, 0), /The Markdown file is larger than 512 KB/);
+    assert.throws(() => C.find("x", big, "plain", false), /The text is larger than 512 KB/);
     assert.throws(() => C.find(big, "x", "plain", false), C.TooLarge);
     assert.throws(() => C.highlightMarkdown(big), C.TooLarge);
     assert.throws(() => C.vimKey(big, 0, 0, "x"), C.TooLarge);
@@ -132,6 +133,17 @@ test("Vim \"+p puts the system clipboard", () => {
         sel = r.sel;
     }
     assert.equal(t, "aclipb");
+});
+
+test("Vim put with a count stops at 512 KB", () => {
+    C.vimReset();
+    const t = "a".repeat(200000) + "\n";
+    let sel = [0, 0];
+    for (const k of ["y", "y", "3"]) sel = C.vimKey(t, sel[0], sel[1], k).sel;
+    const r = C.vimKey(t, sel[0], sel[1], "p");
+    assert.ok(r.text === null || r.text === undefined || r.text === t);
+    assert.match(r.status, /larger than 512 KB/);
+    assert.equal(C.vimKey(t, 0, 0, "p").text.length, 2 * t.length);
 });
 
 test("project ZIP with Git history and import", async () => {
