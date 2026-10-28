@@ -3,6 +3,7 @@
 
 import * as C from "./core.js";
 import * as S from "./store.js";
+import * as Voice from "./voice.js";
 import { samTutorial, SYNTAXES } from "./find.js";
 import { h, dialog, section, footnote, toggleRow, selectRow, segmented, confirmBox, copyText, announce, cmdKey } from "./ui.js";
 
@@ -46,11 +47,52 @@ export function settingsPanel(app) {
             textRow("Name", S.settings.gitName, "The front matter author", (v) => S.setSetting("gitName", v), { autocomplete: "name" }),
             textRow("Email", S.settings.gitEmail, "Optional", (v) => S.setSetting("gitEmail", v), { type: "email", autocomplete: "email", autocapitalize: "off", spellcheck: false }),
             footnote(`Marklove saves each change at once. It also saves a version after a pause in your typing, and when you press ${cmdKey}S or type :w. The version message says what changed. The project ZIP copy includes the history as Git, and other Git apps can read it.`)),
+        voiceSection(app.text()),
         section("Storage",
             footnote("Projects, media, and versions stay in this browser, on this device. Nothing goes to a server. To move a project, save a ZIP copy and import it on the other device.")),
         section("About",
-            footnote("Fonts: Courier Prime, Courier Prime Sans, Libre Baskerville, and KpMath, under the SIL Open Font License. Narration audio and video are available in the Marklove app.")));
+            footnote("Fonts: Courier Prime, Courier Prime Sans, Libre Baskerville, and KpMath, under the SIL Open Font License. The Kokoro voice is the kokoro-js web version of Kokoro-82M, under the Apache License 2.0.")));
     const d = dialog({ title: "Settings", body });
+}
+
+// The Kokoro voice (VoiceModelControls): Download, Play a Sample, and Delete.
+function voiceSection(source) {
+    const voice = C.meta(source, "voice") || Voice.DEFAULT_VOICE;
+    const controls = h("div", {});
+    const status = (t) => h("p", { class: "footnote", role: "status", text: t });
+    async function render(state, p) {
+        controls.replaceChildren();
+        if (state === "downloading") {
+            controls.append(h("progress", { max: "1", value: String(p || 0), "aria-label": "Downloading the Voice" }),
+                status(`Downloading the voice: ${Math.floor((p || 0) * 100)} percent.`));
+            return;
+        }
+        if (state !== "installed") {
+            controls.append(h("div", { class: "row" }, h("button", { type: "button", class: "btn small", onclick: download }, `Download the Voice (${Voice.SIZE_TEXT})`)),
+                status(state ? "The download stopped. " + state : `Narrated video and the podcast need the Kokoro voice (${Voice.SIZE_TEXT}). Download it once. After that, narration works offline.`));
+            return;
+        }
+        const play = h("button", { type: "button", class: "btn small", "aria-description": `Speaks one sentence in the voice ${voice}.` }, "Play a Sample");
+        play.onclick = async () => {
+            play.disabled = true;
+            try { await Voice.playSample(voice); } catch (e) { controls.append(status("The sample did not play. " + (e.message || e))); }
+            play.disabled = false;
+        };
+        const del = h("button", { type: "button", class: "btn small", onclick: async () => {
+            if (!(await confirmBox({ title: "Delete the voice from this browser?", message: `This removes ${Voice.SIZE_TEXT}. You can download it again later.`, choices: [{ label: "Delete the Voice", value: true, danger: true }] }))) return;
+            await Voice.remove();
+            render("");
+        } }, "Delete the Voice");
+        controls.append(h("div", { class: "row" }, play, del), status("The voice is in this browser. Narrated video and the podcast are available."));
+    }
+    async function download() {
+        render("downloading", 0);
+        try { await Voice.load((p) => render("downloading", p)); render("installed"); announce("The voice is ready."); }
+        catch (e) { render(e.message || String(e)); }
+    }
+    Voice.installed().then((ok) => render(ok ? "installed" : ""));
+    return section("Narration", h("div", { class: "row" }, h("span", { class: "row-label", text: "Voice" }), h("span", { class: "row-hint", text: voice })), controls,
+        footnote("Kokoro speaks the narration in this browser. The first download comes from jsDelivr and Hugging Face. To use a different voice, add voice: to the front matter, for example voice: bf_emma."));
 }
 
 // --- Customize ------------------------------------------------------------------------

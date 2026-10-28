@@ -15,6 +15,9 @@ import edit;
 import gitexport;
 import vim;
 import extras;
+import pagesvg;
+import trace;
+import video;
 
 let O_TAKAHASHI = 1;
 let O_TOC = 2;
@@ -97,11 +100,9 @@ export fn ml_text(kind: i32, opts: i32) -> const u8[:] {
     else if k == TEXT_NARRATION { narration_script(); narration_text(R); }
     else if k == TEXT_TRANSCRIPT { narration_script(); transcript(R); }
     else if k == TEXT_VTT || k == TEXT_SRT {
-        slides(opts);
-        var steps: i64[>..] = [];
-        for f in FR { steps.push(0); }
-        for s in SL { steps[s.frame] += s.steps; }
-        timeline(steps);
+        // The video pages and timing (see ml_layout).
+        layout_doc(LAYOUT_VIDEO, opts, 0, 0);
+        R.clear();
         cues_text(R, k == TEXT_SRT);
     }
     return done();
@@ -338,5 +339,176 @@ export fn ml_vim_clipboard() { vim_clipboard(arg(0)); }
 export fn ml_vim_key(sel_s: i32, sel_e: i32) -> const u8[:] {
     R.clear();
     vim_key(R, arg(0), sel_e as i64, sel_s as i64, sel_e as i64, arg(1));
+    return done();
+}
+
+// --- pages: PDF, images and video ------------------------------------------
+//
+// The document arguments, and also:
+//   6 the media sizes, as "path\twidth\theight" lines
+//   7 the narration sentence lengths, as "sentence\tseconds" lines
+// The pages stay in the core for ml_page_svg and the SVG export calls,
+// until the next ml_layout. web/pages.js uses its own core for them.
+
+let LAYOUT_SLIDES = 0;
+let LAYOUT_VIDEO = 1;
+let LAYOUT_ARTICLE = 2;
+let LAYOUT_HANDOUT = 3;
+let LAYOUT_POSTER = 4;
+
+// a: 1 for Letter paper (article, handout), or the poster size.
+// b: 1 for a landscape poster.
+fn layout_doc(kind: i64, opts: i32, a: i64, b: i64) {
+    document(opts);
+    MEDIA.clear();
+    ml_arg(6, MEDIA);
+    DURATIONS.clear();
+    ml_arg(7, DURATIONS);
+    let tk = has(opts, O_TAKAHASHI);
+    var dark = th_prefers_dark(meta("theme")) == 1;
+    if FIXED_THEME == "dark" { dark = true; }
+    if FIXED_THEME == "light" { dark = false; }
+    set_palette(th_palette_of(th_theme(meta("theme"), meta("accent")), dark));
+    GRAY = false;
+    if kind == LAYOUT_SLIDES { layout_slides(tk, TY_SLIDES, true); }
+    else if kind == LAYOUT_VIDEO {
+        layout_slides(tk, TY_VIDEO, false);
+        narration_script();
+        page_timeline();
+    }
+    else if kind == LAYOUT_ARTICLE { layout_article(a == 1); }
+    else if kind == LAYOUT_HANDOUT {
+        // The handout is black and white on paper (Theme.paper).
+        set_palette(th_pal("Black and white", false, "#FFFFFF", "#F2F2F2", "#BDBDBD", "#5C5C5C", "#000000", "#000000", "#000000",
+            "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000", "#000000"));
+        GRAY = true;
+        layout_handout(tk, a == 1);
+    }
+    else if kind == LAYOUT_POSTER { layout_poster(a, b == 1); }
+}
+
+// The pages: {pages: [{width, height, steps, title, text}], warnings,
+// timeline (video only: segments and cues)}.
+export fn ml_layout(kind: i32, opts: i32, a: i32, b: i32) -> const u8[:] {
+    layout_doc(kind, opts, a, b);
+    R.clear();
+    R.append("{\"pages\":[");
+    for p in OUT0..PAGES.len {
+        let pg = PAGES[p];
+        if p > OUT0 { R.push(','); }
+        R.append("{\"width\":");
+        fmt_fixed(R, pg.w, 2);
+        R.append(",\"height\":");
+        fmt_fixed(R, pg.h, 2);
+        format(R, ",\"steps\":", max(1, pg.steps), ",\"title\":");
+        json_str(R, tb(pg.title));
+        R.append(",\"text\":");
+        var t: u8[>..] = [];
+        page_text(t, p);
+        json_str(R, t);
+        R.push('}');
+    }
+    R.append("],\"warnings\":");
+    json_str(R, LWARN);
+    if kind == LAYOUT_VIDEO {
+        R.append(",\"timeline\":");
+        timeline_json(R);
+    }
+    R.push('}');
+    return done();
+}
+
+// A page state as SVG. layer: see LY_ALL in pagesvg.goose. A step of -1
+// shows every step.
+export fn ml_page_svg(page: i32, step: i32, layer: i32, progress: f64, scale: f64) -> const u8[:] {
+    R.clear();
+    let p = OUT0 + page;
+    if p >= OUT0 && p < PAGES.len {
+        page_svg(R, p, if step < 0 { STEP_ALL } else { step }, layer, progress, scale);
+    }
+    return done();
+}
+
+// A page for the SVG export, with "<!--ml-region N-->" marks. ml_regions
+// gives the regions to draw (ml_region_svg) and to trace (ml_trace).
+export fn ml_export_svg(page: i32) -> const u8[:] {
+    R.clear();
+    let p = OUT0 + page;
+    if p >= OUT0 && p < PAGES.len { export_svg(R, p, page + 1); }
+    return done();
+}
+
+export fn ml_regions() -> const u8[:] {
+    R.clear();
+    R.push('[');
+    for r, i in REGIONS {
+        if i > 0 { R.push(','); }
+        R.append("{\"x\":"); fmt_fixed(R, r.x, 3);
+        R.append(",\"y\":"); fmt_fixed(R, r.y, 3);
+        R.append(",\"scale\":"); fmt_fixed(R, r.scale, 4);
+        format(R, ",\"width\":", ceil(r.w * r.scale) as! i64, ",\"height\":", ceil(r.h * r.scale) as! i64, ",\"colors\":", r.colors);
+        R.append(",\"minArea\":"); fmt_fixed(R, r.min_area, 2);
+        R.append(",\"tolerance\":"); fmt_fixed(R, r.tol, 2);
+        R.append(",\"label\":");
+        var l: u8[>..] = [];
+        region_label(l, i);
+        json_str(R, l);
+        R.push('}');
+    }
+    R.push(']');
+    return done();
+}
+
+export fn ml_region_svg(i: i32) -> const u8[:] {
+    R.clear();
+    if i >= 0 && i < REGIONS.len { region_svg(R, i); }
+    return done();
+}
+
+// Traces RGBA pixels in place (argument 0, see ml_trace_arg in io.h).
+// Argument 1 is the label of the group.
+export fn ml_trace(px: const u8[:], rank: u8[:], taken: u8[:], w: i32, h: i32, colors: i32, min_area: f64, tol: f64, x: f64, y: f64, scale: f64) -> const u8[:] {
+    R.clear();
+    trace(R, px, rank, taken, w, h, colors, min_area, tol, x, y, scale, arg(1));
+    return done();
+}
+
+// A front matter value. Argument 6 is the key.
+export fn ml_meta() -> const u8[:] {
+    document(0);
+    var key: u8[>..] = [];
+    ml_arg(6, key);
+    R.clear();
+    R.append(meta(key));
+    return done();
+}
+
+// The podcast cues, from the narration lengths (argument 7).
+export fn ml_podcast(opts: i32) -> const u8[:] {
+    document(opts);
+    DURATIONS.clear();
+    ml_arg(7, DURATIONS);
+    narration_script();
+    sequential_cues();
+    SEGS.clear();
+    R.clear();
+    timeline_json(R);
+    return done();
+}
+
+// The start of an MP4 file. Arguments: 0 1 2 the video sample sizes,
+// durations and key flags, 3 the avcC record, 4 5 the audio sample sizes
+// and durations, 6 the audio decoder configuration. Sizes and durations
+// are 32-bit little-endian numbers.
+export fn ml_mp4(width: i32, height: i32, vscale: i32, codec: i32, ascale: i32, rate: i32, channels: i32) -> const u8[:] {
+    let vs = arg(0);
+    let vd = arg(1);
+    let vk = arg(2);
+    let vc = arg(3);
+    let as_ = arg(4);
+    let ad = arg(5);
+    let ac = arg(6);
+    R.clear();
+    mp4_head(R, Track { vs, vd, vk, vc, vscale }, Track { as_, ad, "", ac, ascale }, width, height, codec, rate, channels);
     return done();
 }

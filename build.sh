@@ -29,7 +29,7 @@ exports=$(sed -n 's/^.*[[:space:]]\(ml_[a-z0-9_]*\)(.*$/_\1/p' "$out/marklove.h"
     -DGS_STACK_RESERVE='(8ull<<20)' -DGS_STACK_GAP=65536 \
     -Wl,--wrap=mmap -Wl,--wrap=munmap -sMAXIMUM_MEMORY=4GB -sSTACK_SIZE=4MB \
     -sMODULARIZE -sEXPORT_ES6 -sENVIRONMENT=web,node -sALLOW_MEMORY_GROWTH \
-    -sEXPORTED_FUNCTIONS="_malloc,_free,_goose_init,_ml_in_alloc,_ml_pack_import_arg,${exports%,}" \
+    -sEXPORTED_FUNCTIONS="_malloc,_free,_goose_init,_ml_in_alloc,_ml_pack_import_arg,_ml_trace_arg,${exports%,}" \
     -sEXPORTED_RUNTIME_METHODS=HEAPU8 \
     -o "$here/web/marklove.mjs"
 

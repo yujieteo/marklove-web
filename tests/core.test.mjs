@@ -198,3 +198,93 @@ test("find and replace with Vim patterns", () => {
     assert.equal(C.replace("ab ab", "\\(a\\)b", "\\u\\1x", "vim", true, 0, 0, true).text, "Ax Ax");
     assert.ok(C.find("a", "\\(", "vim", true).error);
 });
+
+// --- pages, video and audio (web/pages.js and web/video.js) ---------------------------
+
+const P = await C.instance();
+const dec = new TextDecoder();
+const call = (name, inputs, ...ints) => dec.decode(P(name, inputs, ...ints));
+const pageArgs = (source, durations = "") =>
+    [...C.docArgs({ source, assets: doc.assets }), "images/cat.png\t400\t300\n", durations];
+const layout = (kind, a = 0, b = 0, durations = "") =>
+    JSON.parse(call("ml_layout", pageArgs(src, durations), kind, C.O_NARRATION, a, b));
+
+test("page layouts for slides, video, article, handout and poster", () => {
+    const slides = layout(0);
+    assert.equal(slides.pages.length, 2);
+    assert.deepEqual([slides.pages[0].width, slides.pages[0].height], [960, 540]);
+    assert.equal(slides.pages[1].title, "Sound");
+    assert.equal(slides.pages[1].steps, 2);
+    const svg = call("ml_page_svg", [], 1, -1, 0, 1, 2);
+    assert.match(svg, /^<svg [^>]*width="1920" height="1080" viewBox="0 0 960 540"/);
+    assert.match(svg, /\/\*ml-fonts\*\//);
+    assert.match(svg, /href="asset:0"/);
+    const video = layout(1);
+    assert.equal(video.timeline.segments.length, 3);
+    assert.equal(video.timeline.voice, "");
+    const article = layout(2, 1);
+    assert.deepEqual([article.pages[0].width, article.pages[0].height], [612, 792]);
+    assert.ok(layout(3).pages.length >= 1);
+    const poster = layout(4, 0, 0);
+    assert.equal(poster.pages.length, 1);
+    assert.ok(poster.pages[0].height > poster.pages[0].width);
+});
+
+test("SVG export marks the regions to trace", () => {
+    layout(0);
+    const svg = call("ml_export_svg", [], 1);
+    assert.match(svg, /<title id="title">Sound<\/title>/);
+    assert.match(svg, /<!--ml-region 0-->/);
+    const regions = JSON.parse(call("ml_regions", []));
+    assert.ok(regions.length >= 2);
+    assert.ok(regions.some((r) => r.label === "A cat"));
+    assert.match(call("ml_region_svg", [], 0), /^<svg /);
+});
+
+test("trace makes paths from pixels", () => {
+    const w = 20, h = 20, px = new Uint8Array(w * h * 4);
+    for (let y = 5; y < 15; y++) for (let x = 5; x < 15; x++) { const i = (y * w + x) * 4; px[i] = 255; px[i + 3] = 255; }
+    const g = call("ml_trace_arg", [px, "A box"], w, h, 4, 2, 0.6, 10, 20, 2);
+    assert.match(g, /^<g transform="translate\(10 20\) scale\(0.5000\)" fill-rule="evenodd" role="img" aria-label="A box">/);
+    assert.match(g, /<path fill="#ff0000" d="M5 5L15 5L15 15L5 15Z"\/>/);
+    // A large region: the per-pixel arrays are not in a data stack.
+    const big = new Uint8Array(3000 * 1500 * 4);
+    for (let i = 0; i < big.length; i += 4 * 7) { big[i + 1] = 200; big[i + 3] = 255; }
+    assert.match(call("ml_trace_arg", [big, ""], 3000, 1500, 8, 1, 0.5, 0, 0, 4), /aria-hidden="true"/);
+});
+
+test("video and podcast timing use the real sentence lengths", () => {
+    const first = layout(1);
+    const cue = first.timeline.cues.find((c) => c.text === "More text é.");
+    const longer = layout(1, 0, 0, `${cue.text}\t9.5\n`);
+    const again = longer.timeline.cues.find((c) => c.text === cue.text);
+    assert.equal(Math.round((again.end - again.start) * 10), 95);
+    const pod = JSON.parse(call("ml_podcast", pageArgs(src, `${cue.text}\t9.5\n`), C.O_NARRATION));
+    assert.equal(pod.segments.length, 0);
+    assert.equal(pod.cues[0].start, 0.3);
+    for (let i = 1; i < pod.cues.length; i++) assert.ok(pod.cues[i].start >= pod.cues[i - 1].end);
+    assert.match(call("ml_text", pageArgs(src, `${cue.text}\t9.5\n`), C.TEXT_VTT, 0), /^WEBVTT/);
+});
+
+test("MP4 header with video and AAC audio", () => {
+    const u32 = (v) => new Uint8Array(new Uint32Array(v).buffer);
+    const head = P("ml_mp4", [u32([100, 50]), u32([600, 20]), new Uint8Array([1, 0]), new Uint8Array([1, 100, 0, 40]),
+        u32([10, 12]), u32([1024, 1024]), new Uint8Array([17, 144])], 1920, 1080, 600, 1, 48000, 48000, 1);
+    const view = new DataView(head.buffer);
+    const boxes = [];
+    for (let at = 0; at < head.length;) {
+        const size = view.getUint32(at);
+        boxes.push([dec.decode(head.subarray(at + 4, at + 8)), size]);
+        if (boxes.at(-1)[0] === "mdat") break;
+        at += size;
+    }
+    assert.deepEqual(boxes.map((b) => b[0]), ["ftyp", "moov", "mdat"]);
+    assert.equal(boxes[2][1], 8 + 150 + 22);
+    const text = dec.decode(head);
+    for (const box of ["avcC", "mp4a", "esds", "stts", "stss", "stsz", "stco"]) assert.ok(text.includes(box), box);
+});
+
+test("front matter value", () => {
+    assert.equal(C.meta("---\nvoice: bf_emma\n---\n\n# A\n", "voice"), "bf_emma");
+    assert.equal(C.meta(src, "voice"), "");
+});
