@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Marklove</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<a class="skip" href="#source">Skip to the editor</a>
+<header class="topbar" id="topbar">
+  <button type="button" id="title-menu" class="title-btn" aria-label="Project: Marklove"><span id="title-text">Marklove</span><span class="chev" aria-hidden="true">▾</span></button>
+  <div class="spacer"></div>
+  <div id="edit-actions" class="actions">
+    <button type="button" id="insert-btn" class="tb" title="Insert slides, notes, math, tables, and media"><span class="ico" aria-hidden="true">＋</span><span class="lbl">Insert</span></button>
+    <button type="button" id="preview-btn" class="tb" title="Preview the slides"><span class="ico" aria-hidden="true">▶</span><span class="lbl">Preview</span></button>
+    <button type="button" id="export-btn" class="tb" title="Export slides, article, and other formats"><span class="ico" aria-hidden="true">⇪</span><span class="lbl">Export</span></button>
+  </div>
+  <div id="present-actions" class="actions" hidden>
+    <button type="button" id="present-only-btn" class="tb"><span class="ico" aria-hidden="true">▶</span><span class="lbl">Present</span></button>
+  </div>
+  <div id="preview-actions" class="actions" hidden>
+    <div id="view-picker"></div>
+    <div id="style-picker" title="Show the slides in this style. Export uses the same style."></div>
+    <button type="button" id="fullscreen-btn" class="tb" title="Show the preview on the full screen"><span class="ico" aria-hidden="true">⛶</span><span class="lbl">Present</span></button>
+    <button type="button" id="edit-btn" class="tb primary" title="Return to the editor (Escape)"><span class="lbl">Edit</span></button>
+  </div>
+</header>
+<div id="banners"></div>
+<div id="findbar" class="findbar" role="search" aria-label="Find" hidden></div>
+<main id="workspace" class="workspace">
+  <div id="editor-pane" class="editor-pane">
+    <div id="editor" class="editor">
+      <pre id="highlight" class="layer" aria-hidden="true"></pre>
+      <div id="placeholder" class="layer placeholder" aria-hidden="true">Write in Markdown. Use Insert for slides, notes, math, and media.</div>
+      <textarea id="source" class="layer" spellcheck="true" autocapitalize="sentences" aria-label="Markdown source" aria-describedby="editor-hint"></textarea>
+      <span id="editor-hint" hidden>Write in Markdown. Use Insert for slides, notes, math, and media.</span>
+    </div>
+    <div id="eq-pop" class="eq-pop" role="region" aria-label="Equation preview" hidden></div>
+  </div>
+  <div id="preview-pane" class="preview-pane" hidden>
+    <iframe id="preview-frame" title="Preview"></iframe>
+  </div>
+</main>
+<footer id="statusbar" class="statusbar">
+  <span id="vim-mode" class="vim-mode" hidden></span>
+  <span id="vim-line" class="vim-line"></span>
+  <span class="spacer"></span>
+  <span id="line-status" class="line-status" title="The line of the cursor, and the number of lines. You can turn this off in Settings."></span>
+</footer>
+<div id="live" class="visually-hidden" aria-live="polite"></div>
+<div id="loading" class="loading">Marklove is starting…</div>
+<script type="module" src="app.js" onerror="document.getElementById('loading').textContent = 'Marklove could not load its files. Check the connection, and reload the page.'"></script>
+</body>
+</html>

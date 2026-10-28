@@ -1,0 +1,59 @@
+/* Print layouts for the PDFs: the browser print dialog saves them as PDF.
+   The page size (@page) comes from JavaScript with the options of Export. */
+@media print {
+  html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .bar, .skip, #live { display: none !important; }
+}
+
+/* Slides: one slide on each 16:9 page, every reveal step shown. */
+.print-slides body { background: var(--bg); }
+.print-slides .deck { padding: 0 !important; display: block !important; min-height: 0 !important; max-width: none !important; }
+.print-slides .deck .slide { display: block !important; width: 100vw !important; height: 100vh !important; aspect-ratio: auto !important;
+  border: 0 !important; border-radius: 0 !important; break-after: page; page-break-after: always; break-inside: avoid; }
+.print-slides .deck .slide:last-child { break-after: auto; page-break-after: auto; }
+.print-slides .extras { display: none !important; }
+.print-slides [data-step].later { visibility: visible !important; }
+.print-slides .eqsteps .eq { display: none !important; }
+.print-slides .eqsteps .eq:last-child { display: block !important; }
+.print-slides .fig .cap { visibility: hidden !important; }
+
+/* Handout: three slides on each page, public notes at the side, black and white. */
+html.print-handout, .print-handout body { background: #fff !important; }
+.print-handout body { filter: grayscale(1); color: #000; }
+.print-handout .deck { padding: 0 !important; display: block !important; min-height: 0 !important; max-width: none !important; }
+.print-handout .deck .slide { display: grid !important; grid-template-columns: 58% 1fr; gap: 6mm; width: 100% !important; aspect-ratio: auto !important;
+  height: auto !important; container-type: normal !important; border: 0 !important; border-radius: 0 !important; overflow: visible !important;
+  padding: 0 0 6mm !important; margin: 0 0 6mm; border-bottom: 0.3mm solid #999 !important; break-inside: avoid; page-break-inside: avoid; background: #fff !important; }
+.print-handout .deck .slide:nth-child(3n) { break-after: page; page-break-after: always; border-bottom: 0 !important; }
+.print-handout .hframe { position: relative; aspect-ratio: 16 / 9; container-type: size; border: 0.3mm solid #666; overflow: hidden; }
+.print-handout .hframe .frame { position: absolute !important; inset: 0 !important; overflow: hidden !important; }
+.print-handout .takahashi .frame, .print-handout .deck.takahashi .frame { justify-content: center; align-items: center; }
+.print-handout .extras { display: block !important; font-size: 10pt; color: #000; }
+.print-handout .extras details > *:not(summary) { display: block; }
+.print-handout .extras summary { display: block; font-weight: 700; min-height: 0; list-style: none; }
+.print-handout .extras summary::-webkit-details-marker { display: none; }
+.print-handout [data-step].later { visibility: visible !important; }
+.print-handout .eqsteps .eq { display: none !important; }
+.print-handout .eqsteps .eq:last-child { display: block !important; }
+.print-handout .fig .cap { visibility: hidden !important; }
+
+/* Article: one column, the paper size from Export. */
+.print-article body { background: #fff; }
+.print-article article { max-width: none; padding: 0; }
+.print-article h1, .print-article h2, .print-article h3 { break-after: avoid; page-break-after: avoid; }
+.print-article figure, .print-article pre, .print-article table, .print-article .box, .print-article .math-display { break-inside: avoid; page-break-inside: avoid; }
+.print-article .plot input, .print-article .controls { display: none; }
+
+/* Poster: the article on one large page, the title across the top, the sections in columns. */
+html.print-poster { font-size: var(--poster-size, 32px); }
+.print-poster body { margin: 0; }
+.print-poster body { font-size: 1rem; line-height: 1.35; }
+.print-poster article { max-width: none; padding: var(--poster-margin, 25mm); column-count: var(--poster-columns, 3); column-gap: calc(var(--poster-margin, 25mm) * 0.7);
+  column-fill: auto; height: 100vh; overflow: hidden; }
+.print-poster article > header, .print-poster nav.toc { column-span: all; }
+.print-poster nav.toc { display: none; }
+.print-poster h1 { font-size: 2.6em; }
+.print-poster figure, .print-poster pre, .print-poster table, .print-poster .box, .print-poster .math-display, .print-poster .plot, .print-poster .chart { break-inside: avoid; }
+.print-poster h2, .print-poster h3 { break-after: avoid; }
+.print-poster .plot input, .print-poster .controls { display: none; }
+.print-poster figure img, .print-poster figure video { max-height: 40vh; }
