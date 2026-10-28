@@ -318,7 +318,17 @@ async function saveVersion({ explicit = false, message = "" } = {}) {
 }
 
 async function restoreVersion(v) {
-    await saveVersion({ auto: true });
+    if (tooLarge(E.text())) {
+        await alertBox("The text is larger than 512 KB, so Marklove cannot keep it as a version. Make it shorter before you restore an older version.");
+        return;
+    }
+    if (!(await saveVersion({ auto: true }))) {
+        const last = (await S.versions(state.project.id))[0];
+        if (!last || last.markdown !== E.text()) {
+            await alertBox("Marklove cannot keep the current text as a version. Turn on versions in Settings before you restore an older version.");
+            return;
+        }
+    }
     E.replaceAll(v.markdown);
     await flushSave();
     const date = new Date(v.time).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
