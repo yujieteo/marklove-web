@@ -35,12 +35,13 @@ export function load(progress) {
     return loading;
 }
 
-// True when the browser has the model files.
+// True when the browser has the q8 model file. The browser keeps each file
+// when its download completes, so the small files come before the model.
 export async function installed() {
     if (tts) return true;
     try {
         const c = await caches.open(CACHE);
-        return (await c.keys()).some((r) => r.url.includes("Kokoro-82M"));
+        return (await c.keys()).some((r) => r.url.includes(MODEL + "/") && r.url.endsWith("/onnx/model_quantized.onnx"));
     } catch { return false; }
 }
 

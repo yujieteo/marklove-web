@@ -8,7 +8,7 @@ All features are free. The web version has no subscription, no purchase and no P
 
 ## Use
 
-The `web/` folder is a static site. It needs no server code and no network after it loads. The Kokoro voice is the only exception: Settings downloads it one time (about 90 MB), and the browser keeps it. Copy the folder to any path on a web server, for example `/play/marklove/`, and open `index.html`.
+The `web/` folder is a static site. It needs no server code and no network after it loads. The Kokoro voice is the exception: Settings downloads it (about 90 MB), and the browser keeps it. Narration also needs the network to get kokoro-js from jsDelivr. Copy the folder to any path on a web server, for example `/play/marklove/`, and open `index.html`.
 
 To try it on your computer:
 

@@ -245,6 +245,7 @@ export async function video(ctx, opt, kind, progress) {
         samples = V.mix(lay.timeline.cues, c.clips, end(lay.timeline));
         notes = [`Voice ${V.voiceFor(lay.timeline.voice)}. Length ${length(end(lay.timeline))}.`];
     }
+    notes.push(...lay.warnings);
     const share = kind === "narrated" ? 0.6 : 0;
     const p = (x) => progress?.(share + x * (1 - share));
     const animated = kind === "manim" && !matchMedia("(prefers-reduced-motion: reduce)").matches;

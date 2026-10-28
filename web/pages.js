@@ -128,10 +128,13 @@ export async function media(ctx) {
 
 // Lays out the document. The core keeps the pages for pageSVG and the
 // exports below. durations: "sentence\tseconds" lines for the video.
+// warnings: the layout warnings, one string each.
 export function layout(ctx, m, kind, { takahashi = false, appearance = "", a = 0, b = 0, durations = "" } = {}) {
     const args = C.docArgs({ source: ctx.source, assets: ctx.assetURLs, appearance });
     const opts = (takahashi ? C.O_TAKAHASHI : 0) | C.O_NARRATION | C.O_PUBLIC_NOTES;
-    return JSON.parse(text("ml_layout", [...args, m.sizes, durations], kind, opts, a, b));
+    const r = JSON.parse(text("ml_layout", [...args, m.sizes, durations], kind, opts, a, b));
+    r.warnings = r.warnings.split("\n").filter(Boolean);
+    return r;
 }
 
 // The narration cues of the podcast, with the real sentence lengths.
@@ -172,10 +175,11 @@ function descriptions(pages, ext) {
 }
 
 // One PNG image for each slide, 1920 pixels wide, with Descriptions.txt.
+// Returns {files, notes}.
 export async function slidesPNG(ctx, opt, progress) {
     const m = await media(ctx);
     const fonts = await P.embeddedFonts(P.PAGE_FACES);
-    const { pages } = layout(ctx, m, LAYOUT_SLIDES, opt);
+    const { pages, warnings } = layout(ctx, m, LAYOUT_SLIDES, opt);
     const files = [];
     for (let i = 0; i < pages.length; i++) {
         progress?.(i / pages.length);
@@ -184,15 +188,16 @@ export async function slidesPNG(ctx, opt, progress) {
         files.push([slideName(i, pages.length, "png"), await toBlob(await raster(resolve(pageSVG(i, -1, LY_ALL, 1, s), m, fonts), w, hgt), "image/png")]);
     }
     files.push(["Descriptions.txt", descriptions(pages, "png")]);
-    return files;
+    return { files, notes: warnings };
 }
 
 // One SVG file for each slide. The text, photos, equations and plots are
 // drawn alone and traced into vector shapes (SlideImageExporter.svg).
+// Returns {files, notes}.
 export async function slidesSVG(ctx, opt, progress) {
     const m = await media(ctx);
     const fonts = await P.embeddedFonts(P.PAGE_FACES);
-    const { pages } = layout(ctx, m, LAYOUT_SLIDES, opt);
+    const { pages, warnings } = layout(ctx, m, LAYOUT_SLIDES, opt);
     const files = [];
     for (let i = 0; i < pages.length; i++) {
         progress?.(i / pages.length);
@@ -209,29 +214,30 @@ export async function slidesSVG(ctx, opt, progress) {
         files.push([slideName(i, pages.length, "svg"), new Blob([svg], { type: "image/svg+xml" })]);
     }
     files.push(["Descriptions.txt", descriptions(pages, "svg")]);
-    return files;
+    return { files, notes: warnings };
 }
 
 // The pages of a PDF as one HTML page for the print dialog: each page is an
-// SVG image at its own paper size.
+// SVG image at its own paper size. Returns {html, notes}.
 export async function printHTML(ctx, kind, opt) {
     const m = await media(ctx);
     const urls = m.urls.slice();
     Object.values(ctx.assetURLs).forEach((u, i) => { if (!isVideo(Object.keys(ctx.assetURLs)[i])) urls[i] = u; });
-    const { pages } = layout(ctx, m, kind, opt);
+    const { pages, warnings } = layout(ctx, m, kind, opt);
     const w = pages[0]?.width || 960, hgt = pages[0]?.height || 540;
     const body = pages.map((p, i) => resolve(pageSVG(i, -1), { urls }, "")
         .replace(/^<svg /, `<svg class="page" `)).join("");
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${ctx.title.replace(/[<&]/g, "")}</title>
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${ctx.title.replace(/[<&]/g, "")}</title>
 <style>${P.faceCSS(P.fontURL, P.PAGE_FACES)}@page{size:${w}pt ${hgt}pt;margin:0}html,body{margin:0;padding:0}
 svg.page{display:block;width:${w}pt;height:${hgt}pt;break-after:page;page-break-after:always}
 svg.page:last-child{break-after:auto;page-break-after:auto}</style></head><body>${body}</body></html>`;
+    return { html, notes: warnings };
 }
 
-// The captions of the video (WebVTT), with the real sentence lengths.
-export function captions(ctx, m, { takahashi = false, durations = "" } = {}) {
+// The captions of the video (WebVTT, or SRT when srt), with the real sentence lengths.
+export function captions(ctx, m, { takahashi = false, durations = "", srt = false } = {}) {
     const args = C.docArgs({ source: ctx.source, assets: ctx.assetURLs });
-    return text("ml_text", [...args, m.sizes, durations], C.TEXT_VTT, takahashi ? C.O_TAKAHASHI : 0);
+    return text("ml_text", [...args, m.sizes, durations], srt ? C.TEXT_SRT : C.TEXT_VTT, takahashi ? C.O_TAKAHASHI : 0);
 }
 
 // The start of an MP4 file (core/video.goose). The samples follow it.

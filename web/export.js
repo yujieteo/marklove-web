@@ -209,9 +209,12 @@ async function build(id, ctx, opt, progress) {
         case "revisedMarkdown": return { files: [[name, textBlob(C.textOutput(slideDoc, C.TEXT_REVISED_MD, tk), "text/markdown")]] };
         case "narrationScript": return { files: [[name, textBlob(C.textOutput(slideDoc, C.TEXT_NARRATION, 0))]] };
         case "transcript": return { files: [[name, textBlob(C.textOutput(slideDoc, C.TEXT_TRANSCRIPT, 0))]] };
-        case "subtitles":
-            return { files: [[name, textBlob(C.textOutput(slideDoc, C.TEXT_VTT, tk), "text/vtt")],
-                [name.replace(/\.vtt$/, ".srt"), textBlob(C.textOutput(slideDoc, C.TEXT_SRT, tk), "application/x-subrip")]] };
+        case "subtitles": {
+            await G.load();
+            const m = await G.media(ctx);
+            return { files: [[name, textBlob(G.captions(ctx, m, { takahashi }), "text/vtt")],
+                [name.replace(/\.vtt$/, ".srt"), textBlob(G.captions(ctx, m, { takahashi, srt: true }), "application/x-subrip")]] };
+        }
         case "promptText": return { files: [[name, textBlob(C.listener(ctx.source, C.LIST_REVISION_PROMPT))]] };
         case "presenterZIP": {
             const paths = [...C.listener(ctx.source, C.LIST_PUBLIC_ASSETS), ...C.listener(ctx.source, C.LIST_PRIVATE_ASSETS)];
@@ -232,13 +235,13 @@ async function build(id, ctx, opt, progress) {
                 articlePDF: [G.LAYOUT_ARTICLE, { appearance: "light", a: letter }],
                 posterPDF: [G.LAYOUT_POSTER, { appearance: "light", a: G.POSTER_SIZES.indexOf(opt.posterSize), b: opt.posterOrientation === "landscape" ? 1 : 0 }],
             }[id];
-            const html = await G.printHTML(ctx, kind, o);
-            return { print: () => printPage(html), name };
+            const { html, notes } = await G.printHTML(ctx, kind, o);
+            return { print: () => printPage(html), name, notes };
         }
         case "slidesPNG": case "slidesSVG": {
             await G.load();
-            const files = await (id === "slidesPNG" ? G.slidesPNG : G.slidesSVG)(ctx, { takahashi, appearance: dark }, progress);
-            return { files: [[name, await zipOf(files, now())]] };
+            const { files, notes } = await (id === "slidesPNG" ? G.slidesPNG : G.slidesSVG)(ctx, { takahashi, appearance: dark }, progress);
+            return { files: [[name, await zipOf(files, now())]], notes };
         }
         case "video": case "manimVideo":
             await G.load();
@@ -361,7 +364,7 @@ export function exportSheet(ctx) {
                 if (r.reason) results.push({ id, ok: false, reason: r.reason, notes: [] });
                 else if (r.print) {
                     await r.print();
-                    results.push({ id, ok: true, notes: ["The print dialog opened. Select Save as PDF. Suggested name: " + r.name] });
+                    results.push({ id, ok: true, notes: ["The print dialog opened. Select Save as PDF. Suggested name: " + r.name, ...r.notes] });
                 } else {
                     files.push(...r.files);
                     results.push({ id, ok: true, files: r.files, notes: r.notes || [] });

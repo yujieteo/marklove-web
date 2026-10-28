@@ -69,7 +69,7 @@ function voiceSection(source) {
         }
         if (state !== "installed") {
             controls.append(h("div", { class: "row" }, h("button", { type: "button", class: "btn small", onclick: download }, `Download the Voice (${Voice.SIZE_TEXT})`)),
-                status(state ? "The download stopped. " + state : `Narrated video and the podcast need the Kokoro voice (${Voice.SIZE_TEXT}). Download it once. After that, narration works offline.`));
+                status(state ? "The download stopped. " + state : `Narrated video and the podcast need the Kokoro voice (${Voice.SIZE_TEXT}). After the download, the browser keeps the voice.`));
             return;
         }
         const play = h("button", { type: "button", class: "btn small", "aria-description": `Speaks one sentence in the voice ${voice}.` }, "Play a Sample");
