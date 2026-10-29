@@ -3,7 +3,7 @@
   --accent: #0072d4; --s1: #0072d4; --s2: #c25d1e; --s3: #428b00; --s4: #ca4898; --s5: #009c8f; --s6: #8762c6;
   --kw: #428b00; --str: #009c8f; --num: #ca4898; --com: #909995; --type: #ad8900; --fn: #0072d4; }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
 body { margin: 0; background: var(--bg); color: var(--text);
   font-family: "Iowan Old Style", "Charter", "Georgia", "Libre Baskerville", serif; font-size: 1.125rem; line-height: 1.6; }
 .skip { position: absolute; left: -9999px; }
@@ -55,4 +55,3 @@ nav.toc { border-top: 1px solid var(--border); border-bottom: 1px solid var(--bo
 nav.toc ol { margin: 0; padding-left: 1.2rem; }
 nav.toc h2 { font-size: 1rem; margin: 0 0 .4rem; }
 @media print { body { background: none; } article { padding: 0; } a { color: inherit; } }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

@@ -42,14 +42,17 @@ function applyTheme() {
     const t = themes.find((x) => x.id === S.settings.themeID) || themes[0];
     const a = S.settings.appearance;
     const dark = t.darkOnly || a === "dark" || (a === "system" && darkQuery.matches);
-    const p = C.themePalette(t.id, "", dark, S.settings.increaseContrast || contrastQuery.matches);
-    const s = document.documentElement.style;
+    const contrast = S.settings.increaseContrast || contrastQuery.matches;
+    const p = C.themePalette(t.id, "", dark, contrast);
+    // The theme colors the document (the editor and the preview). The app chrome
+    // keeps the light Kowalski look of /shared/kowalski.css.
+    const s = $("workspace").style;
     for (const k of ["bg:background", "surface", "border", "dim", "text", "strong", "accent", "red", "green", "orange", "violet", "yellow"]) {
         const [v, key] = k.includes(":") ? k.split(":") : [k, k];
         s.setProperty("--" + v, p[key]);
     }
     s.colorScheme = dark ? "dark" : "light";
-    document.querySelector('meta[name="color-scheme"]').content = dark ? "dark" : "light";
+    document.documentElement.classList.toggle("contrast", contrast);
     E.setPalette(p.roles);
 }
 
