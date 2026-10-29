@@ -99,7 +99,7 @@ export function issueRow(d, text, goToSource) {
         h("div", { class: "msg" }, h("span", { class: warn ? "status-warn" : "", "aria-label": warn ? "Warning" : "Information" }, warn ? "⚠ " : "ⓘ "), d.message),
         h("div", { class: "where", text: `Line ${lineOf(text, d.start)} · ${formatNames(d)}` }),
         d.detail ? h("details", {}, h("summary", { text: "More" }), h("p", { text: d.detail })) : null,
-        h("button", { type: "button", class: "btn small", onclick: goToSource }, "Go to Source"));
+        h("button", { type: "button", class: "button", onclick: goToSource }, "Go to Source"));
 }
 
 // --- builders -------------------------------------------------------------------------
@@ -322,7 +322,7 @@ export function exportSheet(ctx) {
         else if (!sel.length) checks.push(h("div", { class: "row" }, h("span", { class: "status-ok", text: "✓ Ready to export" })));
         else {
             checks.push(h("div", { class: "row" }, h("span", { class: "status-warn", text: `⚠ Source checks to review: ${sel.length}` }),
-                h("button", { type: "button", class: "btn small", "aria-expanded": String(st.showIssues), onclick: () => { st.showIssues = !st.showIssues; render(); } }, st.showIssues ? "Hide" : "Show")));
+                h("button", { type: "button", class: "button", "aria-expanded": String(st.showIssues), onclick: () => { st.showIssues = !st.showIssues; render(); } }, st.showIssues ? "Hide" : "Show")));
             checks.push(footnote("Export stays available. Marklove uses a clear fallback for each issue and keeps every word."));
             if (st.showIssues) checks.push(h("div", {}, sel.map((x) => issueRow(x, ctx.source, () => { d.close(); ctx.goToSource(x, true); }))));
         }

@@ -71,7 +71,7 @@ The tests use the built core through `web/core.js`. The project ZIP test also ru
 | `web/store.js`, `web/ui.js`, `web/editor.js`, `web/find.js`, `web/preview.js`, `web/export.js`, `web/panels.js` | The app parts: storage and settings, controls, the editor, Find and Vim, the preview and presentation, export, and the other panels. |
 | `web/pages.js`, `web/video.js`, `web/voice.js` | The PDF pages, the PNG and SVG slides, the video and audio encoders, and the Kokoro voice. |
 | `web/demo-peafowl.png` | The photo of the tour project. |
-| `web/style.css`, `web/runtime.js`, `web/article.css`, `web/article.js` | The parts of the exported pages, based on Marklove. `web/style.css` and `web/article.css` add the shared interaction rules: press scale, hover only on a fine pointer, no tap highlight, and opacity kept in reduced motion. Thus they differ from the native app. |
+| `web/style.css`, `web/runtime.js`, `web/article.css`, `web/article.js` | The parts of the exported pages, based on Marklove. `web/style.css` and `web/article.css` add the shared interaction rules: press scale, a hover fade only on a fine pointer, and no tap highlight. Thus they differ from the native app. |
 | `web/fonts/` | Courier Prime, Courier Prime Sans, Libre Baskerville and KpMath, with their licenses (SIL Open Font License). |
 
 The Kokoro voice uses the web version of [kokoro-js](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) 1.2.1 from jsDelivr. It runs the Kokoro-82M ONNX model (`onnx-community/Kokoro-82M-v1.0-ONNX`, q8) from Hugging Face. Both are under the Apache License 2.0.

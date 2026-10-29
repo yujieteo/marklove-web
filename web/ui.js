@@ -118,7 +118,7 @@ export function dialog({ title, body, buttons = [{ label: "Done", primary: true 
     const made = [];
     for (const b of buttons) {
         const el = h("button", {
-            type: "button", class: "btn" + (b.primary ? " primary" : "") + (b.danger ? " danger" : ""), disabled: b.disabled,
+            type: "button", class: "button" + (b.primary ? " primary" : "") + (b.danger ? " danger" : ""), disabled: b.disabled,
             onclick: async () => { const r = b.action ? await b.action() : undefined; if (r !== false) close(); },
         }, b.label);
         made.push(el);
@@ -151,11 +151,11 @@ export function confirmBox({ title, message, choices }) {
         const row = h("div", { class: "confirm-row" });
         for (const c of choices) {
             row.append(h("button", {
-                type: "button", class: "btn" + (c.danger ? " danger" : "") + (c.primary ? " primary" : ""),
+                type: "button", class: "button" + (c.danger ? " danger" : "") + (c.primary ? " primary" : ""),
                 onclick: () => { value = c.value; d.close(); },
             }, c.label));
         }
-        row.append(h("button", { type: "button", class: "btn", onclick: () => d.close() }, "Cancel"));
+        row.append(h("button", { type: "button", class: "button", onclick: () => d.close() }, "Cancel"));
         body.append(row);
         const d = dialog({ title, body, buttons: [], onClose: () => resolve(value) });
         row.querySelector("button")?.focus();
@@ -191,11 +191,12 @@ export function segmented(label, options, value, onchange) {
         for (const b of group.children) {
             const on = b.dataset.value === v;
             b.setAttribute("aria-checked", String(on));
+            b.dataset.active = String(on);
             b.tabIndex = on ? 0 : -1;
         }
     };
     for (const [v, t] of options) {
-        group.append(h("button", { type: "button", role: "radio", "data-value": v, onclick: () => { set(v); onchange(v); } }, t));
+        group.append(h("button", { type: "button", class: "button", role: "radio", "data-value": v, onclick: () => { set(v); onchange(v); } }, t));
     }
     group.addEventListener("keydown", (e) => {
         const all = [...group.children];

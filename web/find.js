@@ -186,8 +186,8 @@ function build() {
             oninput: (e) => { find.replacement = e.target.value; },
             onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); replaceCurrent(); } },
         });
-        const one = h("button", { type: "button", class: "btn small", onclick: replaceCurrent }, "Replace");
-        const all = h("button", { type: "button", class: "btn small", "aria-label": "Replace All", onclick: replaceAllMatches }, "All");
+        const one = h("button", { type: "button", class: "button", onclick: replaceCurrent }, "Replace");
+        const all = h("button", { type: "button", class: "button", "aria-label": "Replace All", onclick: replaceAllMatches }, "All");
         const count = h("span", { class: "find-status" });
         bar.append(h("div", { class: "find-row" }, h("span", { class: "glyph", "aria-hidden": "true" }, "⇄"), r, one, all), count);
         Object.assign(els, { replace: r, replaceOne: one, replaceAll: all, count });
@@ -201,7 +201,7 @@ function build() {
             onkeydown: (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (find.command.trim()) runCommand(); } },
         });
         c.value = find.command;
-        const run = h("button", { type: "button", class: "btn small", title: "Run the sam command (⌘Return)", disabled: !find.command.trim(), onclick: runCommand }, "Run");
+        const run = h("button", { type: "button", class: "button", title: "Run the sam command (⌘Return)", disabled: !find.command.trim(), onclick: runCommand }, "Run");
         const cstatus = h("div", { class: "find-status", role: "status" });
         const out = h("pre", { class: "sam-output", "aria-label": "Command output", hidden: true });
         bar.append(h("div", { class: "find-row" }, h("span", { class: "glyph", "aria-hidden": "true" }, "»"), c, run), cstatus, out);
@@ -294,7 +294,7 @@ function lesson([title, text, sample, command]) {
     const result = h("div", {});
     const input = h("textarea", { rows: "1", "aria-label": "Command for " + title, spellcheck: "false", autocapitalize: "off", class: "lesson-cmd" });
     input.value = command;
-    const reset = h("button", { type: "button", class: "btn small", hidden: true, onclick: () => { input.value = command; update(); } }, "Reset");
+    const reset = h("button", { type: "button", class: "button", hidden: true, onclick: () => { input.value = command; update(); } }, "Reset");
     function update() {
         reset.hidden = input.value === command;
         input.rows = Math.min(5, input.value.split("\n").length);
