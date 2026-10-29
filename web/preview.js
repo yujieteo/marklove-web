@@ -170,12 +170,12 @@ export function speakerReady({ source, assets, takahashi, appearance, startOffse
         time.textContent = fmt(s);
         time.setAttribute("aria-label", "Time: " + fmt(s));
     };
-    const startBtn = h("button", { type: "button", class: "btn primary", onclick: () => {
+    const startBtn = h("button", { type: "button", class: "button primary", onclick: () => {
         if (started) { elapsed += Date.now() - started; started = 0; clearInterval(timer); startBtn.textContent = "Start"; }
         else { started = Date.now(); timer = setInterval(tick, 1000); startBtn.textContent = "Pause"; }
         tick();
     } }, "Start");
-    const resetBtn = h("button", { type: "button", class: "btn", onclick: () => { elapsed = 0; if (started) started = Date.now(); tick(); } }, "Reset");
+    const resetBtn = h("button", { type: "button", class: "button", onclick: () => { elapsed = 0; if (started) started = Date.now(); tick(); } }, "Reset");
 
     function update() {
         const s = outline[index];
@@ -222,8 +222,8 @@ export function speakerReady({ source, assets, takahashi, appearance, startOffse
         else if (back(e.key)) go(-1, false, true);
     };
 
-    const prevBtn = h("button", { type: "button", class: "btn", "aria-label": "Previous Slide", title: "Previous slide", onclick: () => go(-1) }, "◀");
-    const nextBtn = h("button", { type: "button", class: "btn", "aria-label": "Next Slide", title: "Next slide", onclick: () => go(1) }, "▶");
+    const prevBtn = h("button", { type: "button", class: "button", "aria-label": "Previous Slide", title: "Previous slide", onclick: () => go(-1) }, "◀");
+    const nextBtn = h("button", { type: "button", class: "button", "aria-label": "Next Slide", title: "Next slide", onclick: () => go(1) }, "▶");
     const body = h("div", { class: "speaker" },
         h("div", { class: "col" }, curHost, h("div", { class: "ctl" }, prevBtn, counter, nextBtn)),
         h("div", { class: "col" }, h("div", { class: "timer" }, time, startBtn, resetBtn), nextLabel, nextHost, last,

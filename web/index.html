@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#f9f9f8">
 <title>Marklove</title>
 <link rel="stylesheet" href="/shared/kowalski.css">
 <link rel="stylesheet" href="app.css">
@@ -13,18 +14,18 @@
   <button type="button" id="title-menu" class="title-btn" aria-label="Project: Marklove"><span id="title-text">Marklove</span><span class="chev" aria-hidden="true">▾</span></button>
   <div class="spacer"></div>
   <div id="edit-actions" class="actions">
-    <button type="button" id="insert-btn" class="tb" title="Insert slides, notes, math, tables, and media"><span class="ico" aria-hidden="true">＋</span><span class="lbl">Insert</span></button>
-    <button type="button" id="preview-btn" class="tb" title="Preview the slides"><span class="ico" aria-hidden="true">▶</span><span class="lbl">Preview</span></button>
-    <button type="button" id="export-btn" class="tb" title="Export slides, article, and other formats"><span class="ico" aria-hidden="true">⇪</span><span class="lbl">Export</span></button>
+    <button type="button" id="insert-btn" class="button tb" title="Insert slides, notes, math, tables, and media"><span class="ico" aria-hidden="true">＋</span><span class="lbl">Insert</span></button>
+    <button type="button" id="preview-btn" class="button tb" title="Preview the slides"><span class="ico" aria-hidden="true">▶</span><span class="lbl">Preview</span></button>
+    <button type="button" id="export-btn" class="button tb" title="Export slides, article, and other formats"><span class="ico" aria-hidden="true">⇪</span><span class="lbl">Export</span></button>
   </div>
   <div id="present-actions" class="actions" hidden>
-    <button type="button" id="present-only-btn" class="tb"><span class="ico" aria-hidden="true">▶</span><span class="lbl">Present</span></button>
+    <button type="button" id="present-only-btn" class="button tb"><span class="ico" aria-hidden="true">▶</span><span class="lbl">Present</span></button>
   </div>
   <div id="preview-actions" class="actions" hidden>
     <div id="view-picker"></div>
     <div id="style-picker" title="Show the slides in this style. Export uses the same style."></div>
-    <button type="button" id="fullscreen-btn" class="tb" title="Show the preview on the full screen"><span class="ico" aria-hidden="true">⛶</span><span class="lbl">Present</span></button>
-    <button type="button" id="edit-btn" class="tb primary" title="Return to the editor (Escape)"><span class="lbl">Edit</span></button>
+    <button type="button" id="fullscreen-btn" class="button tb" title="Show the preview on the full screen"><span class="ico" aria-hidden="true">⛶</span><span class="lbl">Present</span></button>
+    <button type="button" id="edit-btn" class="button tb primary" title="Return to the editor (Escape)"><span class="lbl">Edit</span></button>
   </div>
 </header>
 <div id="banners"></div>

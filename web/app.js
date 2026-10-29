@@ -99,7 +99,7 @@ function renderBanners() {
         box.append(h("div", { class: "banner", role: "region", "aria-label": "Source issue" },
             h("span", { class: "warn", "aria-hidden": "true" }, "⚠"),
             h("span", { class: "msg" }, h("strong", { text: f.message || "Source passage" }), f.detail ? h("span", { class: "detail", text: f.detail }) : null),
-            f.returnToExport ? h("button", { type: "button", class: "btn small", onclick: () => { state.focus = null; renderBanners(); openExport(); } }, "Back to Export") : null,
+            f.returnToExport ? h("button", { type: "button", class: "button", onclick: () => { state.focus = null; renderBanners(); openExport(); } }, "Back to Export") : null,
             h("button", { type: "button", class: "iconbtn", "aria-label": "Close the explanation", title: "Close the explanation", onclick: () => { state.focus = null; renderBanners(); E.focus(); } }, "✕")));
     }
 }
@@ -131,6 +131,7 @@ async function openProject(id, { preview = false } = {}) {
     updatePlaceholder();
     $("title-text").textContent = p.name;
     $("title-menu").setAttribute("aria-label", "Project: " + p.name);
+    $("title-menu").title = p.name;
     document.title = p.name + " – Marklove";
     restoreEditorState();
     applySettings();
@@ -248,6 +249,7 @@ async function rename(name) {
     await S.saveProject(p);
     $("title-text").textContent = n;
     $("title-menu").setAttribute("aria-label", "Project: " + n);
+    $("title-menu").title = n;
     document.title = n + " – Marklove";
     await refreshList();
 }
@@ -559,7 +561,7 @@ function updateEquation() {
     pop.replaceChildren(math,
         h("p", { class: "eq-spoken", "aria-label": "Spoken as: " + spoken, text: spoken }),
         h("div", { class: "eq-foot" }, h("span", { text: m.display ? "Display equation" : "Inline equation" }), h("span", { class: "spacer" }),
-            h("button", { type: "button", class: "btn small", onclick: async () => { await copyText(m.latex); announce("Copied the LaTeX."); } }, "Copy LaTeX"),
+            h("button", { type: "button", class: "button", onclick: async () => { await copyText(m.latex); announce("Copied the LaTeX."); } }, "Copy LaTeX"),
             h("button", { type: "button", class: "iconbtn", "aria-label": "Close the equation preview", onclick: () => { eq.open = false; pop.hidden = true; E.focus(); } }, "✕")));
     pop.hidden = false;
     return true;

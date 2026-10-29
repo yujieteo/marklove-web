@@ -68,17 +68,17 @@ function voiceSection(source) {
             return;
         }
         if (state !== "installed") {
-            controls.append(h("div", { class: "row" }, h("button", { type: "button", class: "btn small", onclick: download }, `Download the Voice (${Voice.SIZE_TEXT})`)),
+            controls.append(h("div", { class: "row" }, h("button", { type: "button", class: "button", onclick: download }, `Download the Voice (${Voice.SIZE_TEXT})`)),
                 status(state ? "The download stopped. " + state : `Narrated video and the podcast need the Kokoro voice (${Voice.SIZE_TEXT}). After the download, the browser keeps the voice.`));
             return;
         }
-        const play = h("button", { type: "button", class: "btn small", "aria-description": `Speaks one sentence in the voice ${voice}.` }, "Play a Sample");
+        const play = h("button", { type: "button", class: "button", "aria-description": `Speaks one sentence in the voice ${voice}.` }, "Play a Sample");
         play.onclick = async () => {
             play.disabled = true;
             try { await Voice.playSample(voice); } catch (e) { controls.append(status("The sample did not play. " + (e.message || e))); }
             play.disabled = false;
         };
-        const del = h("button", { type: "button", class: "btn small", onclick: async () => {
+        const del = h("button", { type: "button", class: "button", onclick: async () => {
             if (!(await confirmBox({ title: "Delete the voice from this browser?", message: `This removes ${Voice.SIZE_TEXT}. You can download it again later.`, choices: [{ label: "Delete the Voice", value: true, danger: true }] }))) return;
             await Voice.remove();
             render("");
@@ -239,7 +239,7 @@ const SYNTAX = [
 export function helpPanel(app) {
     let includeSelection = false;
     const copyBtn = (label, make) => {
-        const b = h("button", { type: "button", class: "btn", onclick: async () => {
+        const b = h("button", { type: "button", class: "button", onclick: async () => {
             try { await copyText(make()); } catch (e) { announce(e.message); return; }
             b.textContent = "Copied"; announce("Copied");
         } }, label);
@@ -254,7 +254,7 @@ export function helpPanel(app) {
         section("Syntax", ...SYNTAX.map(([name, text]) => h("div", { class: "item" },
             h("div", { class: "item-title", text: name }),
             h("pre", { class: "code", text }),
-            h("div", { class: "item-actions" }, h("button", { type: "button", class: "btn small", disabled: app.readOnly(), "aria-label": "Insert " + name, onclick: () => { d.close(); app.insertText(text); } }, "Insert"))))),
+            h("div", { class: "item-actions" }, h("button", { type: "button", class: "button", disabled: app.readOnly(), "aria-label": "Insert " + name, onclick: () => { d.close(); app.insertText(text); } }, "Insert"))))),
         section("Write with an AI Tool",
             h("p", { class: "group", text: "Copy a prompt with the Marklove rules. Paste it into Claude, ChatGPT, or another tool. The rules ask for short sentences that fit Takahashi slides, and for plots, charts, and equation steps. Then paste the Markdown back here. Marklove sends nothing by itself." }),
             toggleRow("Include the selected text", false, (v) => { includeSelection = v; }),
@@ -294,7 +294,7 @@ export async function projectsPanel(app, { received = false } = {}) {
                     h("span", { class: "item-title", text: (current ? "✓ " : "") + p.name }),
                     h("span", { class: "item-sub", text: new Date(p.modified).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) })),
                 h("div", { class: "item-actions" },
-                    h("button", { type: "button", class: "btn small danger", "aria-label": "Delete " + p.name, onclick: async () => { if (await app.deleteProject(p)) render(); } }, "Delete"))));
+                    h("button", { type: "button", class: "button danger", "aria-label": "Delete " + p.name, onclick: async () => { if (await app.deleteProject(p)) render(); } }, "Delete"))));
         }
     }
     await render();
@@ -332,8 +332,8 @@ export async function historyPanel(app) {
                 h("div", { class: "item-sub", text: when(v.time) }),
                 bodyText ? h("div", { class: "item-sub", style: { whiteSpace: "pre-wrap" }, text: bodyText.split("\n").slice(0, 6).join("\n") }) : null,
                 h("div", { class: "item-actions" },
-                    h("button", { type: "button", class: "btn small", onclick: () => versionDetail(v, all[i + 1] || null, app.text()) }, "Changes"),
-                    h("button", { type: "button", class: "btn small", disabled: i === 0 || app.readOnly(), onclick: async () => {
+                    h("button", { type: "button", class: "button", onclick: () => versionDetail(v, all[i + 1] || null, app.text()) }, "Changes"),
+                    h("button", { type: "button", class: "button", disabled: i === 0 || app.readOnly(), onclick: async () => {
                         const ok = await confirmBox({ title: "Restore this version?", message: `The project text and its files change to the version from ${when(v.time)}. Marklove first saves the current text as a version, so you can go back.`, choices: [{ label: "Restore", value: true, primary: true }] });
                         if (ok) { await app.restoreVersion(v); render(); }
                     } }, "Restore…"))));

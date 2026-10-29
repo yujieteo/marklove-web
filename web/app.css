@@ -16,8 +16,10 @@
 :root.contrast { --line: var(--muted); }
 .workspace { --bg: #FBF3DB; --surface: #ECE3CC; --border: #D5CDB6; --dim: #5F6764; --text: #53676D; --strong: #3A4D53; --accent: #0065BE; }
 [hidden] { display: none !important; }
-html, body { height: 100%; margin: 0; }
-body { display: flex; flex-direction: column; overflow: hidden; }
+/* The app shell tracks the visible height, and a pull at the top of the editor does not reload the page.
+   https://github.com/emilkowalski/skills/blob/a81dbca07f2217b7103e510c0f13f8d5b017afc9/skills/mobile-native/SKILL.md#3-layout-has-the-wrong-height */
+html, body { height: 100%; margin: 0; overscroll-behavior: none; }
+body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -26,6 +28,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .loading { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); color: var(--muted); z-index: 100; }
 .loading[hidden] { display: none; }
 .spacer { flex: 1; }
+/* Short headings wrap to even lines, and prose wraps with no one-word last line.
+   https://github.com/shuding/react-wrap-balancer (now the CSS text-wrap property) */
+.banner .msg strong, .item-title, .issue .msg { text-wrap: balance; }
+.alert-text, .footnote, .row-hint, .item-sub, .banner .detail, .choice .sub { text-wrap: pretty; }
 
 /* Toolbar */
 .topbar { display: flex; align-items: center; gap: 8px; padding: 6px max(12px, env(safe-area-inset-left)); padding-top: max(6px, env(safe-area-inset-top));
@@ -36,23 +42,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .chev { color: var(--muted); font-size: var(--small); }
 .actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .actions[hidden] { display: none; }
-.tb { display: inline-flex; align-items: center; gap: 6px; min-height: var(--tap); min-width: var(--tap); padding: 0 12px; border-radius: var(--radius);
-  border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
-.tb.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tb { display: inline-flex; align-items: center; gap: 6px; }
 .tb .ico { font-size: 14px; line-height: 1; }
 @media (max-width: 560px) {
   .tb .lbl { display: none; }
   #edit-btn .lbl { display: inline; }
   .title-btn { max-width: 40vw; }
-  #style-picker .segmented button, #view-picker .segmented button { padding: 0 8px; }
 }
 
-/* Buttons and form controls */
-.btn { min-height: var(--tap); padding: 0 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.danger { color: var(--red); }
-.btn.small { padding: 0 10px; font-size: var(--small); }
-.btn[disabled], .tb[disabled], .menu-item[disabled] { opacity: .45; cursor: default; }
+/* Buttons take the look of .button in /shared/kowalski.css (rule 11). These are the variants. */
+.button.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.button.danger { color: var(--red); }
+.button[disabled], .menu-item[disabled] { opacity: .45; cursor: default; }
+/* Ghost buttons: no box, but the same hover fade and focus ring as .button. */
+.title-btn, .iconbtn { transition: transform var(--press-duration) var(--ease-out), background-color var(--fade-duration), color var(--fade-duration); }
+.title-btn:focus-visible, .iconbtn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .linkbtn { background: none; border: none; color: var(--ink); text-decoration: underline 0.08em var(--underline); text-underline-position: from-font;
   padding: 4px 0; cursor: pointer; text-align: left; min-height: var(--tap); }
 select, input[type=text], input[type=email], input:not([type]), input[type=range] { min-height: var(--tap); }
@@ -63,10 +67,8 @@ input[type=range] { accent-color: var(--accent); }
 .row:has(> input[type=checkbox]) { position: relative; }
 .row:has(> input[type=checkbox]) > label::after { content: ""; position: absolute; inset: 0; }
 .row:has(> input[type=checkbox]) > label { user-select: none; -webkit-user-select: none; touch-action: manipulation; }
-.segmented { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--bg); }
-.segmented button { border: none; background: none; min-height: var(--tap); padding: 0 12px; cursor: pointer; color: var(--ink); }
-.segmented button + button { border-left: 1px solid var(--line); }
-.segmented button[aria-checked="true"] { background: var(--ink); color: var(--bg); }
+/* A segmented control is a row of .button; the chosen one has data-active=true, as on sonner.emilkowal.ski. */
+.segmented { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 
 /* Menus */
 .menu { position: fixed; z-index: 60; min-width: 220px; max-width: min(360px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow: auto;
@@ -121,6 +123,12 @@ input[type=range] { accent-color: var(--accent); }
 .editor:focus-within { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
 .placeholder { color: var(--dim); pointer-events: none; }
 .placeholder[hidden] { display: none; }
+/* iOS zooms into a text field under 16 px and does not zoom out. Both editor layers change, so they stay aligned.
+   https://github.com/emilkowalski/skills/blob/a81dbca07f2217b7103e510c0f13f8d5b017afc9/skills/mobile-native/SKILL.md#4-page-zooms-into-the-input */
+@media (pointer: coarse) {
+  .layer { font-size: max(16px, var(--editor-size)); }
+  .find-row input, .find-row textarea { font-size: 16px; }
+}
 .vim-normal #source { caret-color: transparent; }
 .vim-cursor { background: color-mix(in srgb, var(--accent) 55%, transparent); color: var(--bg); border-radius: 1px; }
 
@@ -236,10 +244,10 @@ dialog.sheet.full { width: calc(100vw - 16px); max-width: calc(100vw - 16px); he
 dialog.sheet.full .sheet-body { display: flex; flex-direction: column; }
 .listener-frame { flex: 1; width: 100%; min-height: 360px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
 
-/* Hover only on a fine pointer, and with no transition (kowalski.css rules 4 and 5). */
+/* Hover only on a fine pointer (kowalski.css rule 4). Buttons fade (rule 11); menu items and links change at once. */
 @media (hover: hover) and (pointer: fine) {
   .title-btn:hover { background: var(--hover); }
-  .tb:hover:not(.primary), .btn:hover:not([disabled]):not(.primary) { border-color: var(--underline-hover); }
+  .button.primary:hover:not([disabled]) { background: var(--muted); border-color: var(--muted); }
   .menu-item:hover:not([disabled]) { background: var(--hover); }
   .iconbtn:hover:not([disabled]) { background: var(--hover); color: var(--ink); }
   .linkbtn:hover { text-decoration-color: var(--underline-hover); }
