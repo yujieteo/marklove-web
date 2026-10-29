@@ -157,9 +157,10 @@ input[type=range] { accent-color: var(--accent); }
 .vim-mode { font-family: var(--mono); font-weight: 700; padding: 1px 8px; border-radius: 4px; }
 .vim-line { font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
 
-/* Framed boxes: 12 px radius, white inside, and a 1 px border drawn over the content (an outline, so an iframe cannot cover it). */
+/* Framed boxes: 12 px radius and a 1 px border drawn over the content (an outline, so an iframe cannot cover it). */
 dialog.sheet, .eq-pop, .theme-preview, .speaker iframe, .listener-frame { border: 0; border-radius: var(--frame-radius); outline: 1px solid var(--frame-border); outline-offset: -1px; }
-dialog.sheet, .eq-pop { background: #fff; }
+dialog.sheet { background: #fff; }
+.eq-pop { background: var(--bg); outline-color: var(--border); }
 
 /* Sheets (dialogs) */
 dialog.sheet { padding: 0; color: var(--ink);
