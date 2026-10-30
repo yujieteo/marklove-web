@@ -41,11 +41,11 @@ a { color: var(--accent); }
 .skip:focus { left: 1rem; }
 
 /* Controls */
-.bar { position: fixed; inset: auto 0 0 0; display: flex; gap: .5rem; align-items: center; justify-content: center;
+.bar { position: fixed; inset: auto 0 0 0; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: center;
   padding: .5rem max(16px, env(safe-area-inset-left)) calc(.5rem + env(safe-area-inset-bottom)); background: var(--bg);
   border-top: 1px solid var(--border); z-index: 5; }
 .bar button { font: inherit; color: var(--strong); background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; min-height: 44px; min-width: 44px; padding: 0 .9rem; cursor: pointer;
+  border-radius: 8px; min-height: 44px; min-width: 44px; flex-shrink: 0; padding: 0 .9rem; cursor: pointer;
   touch-action: manipulation; user-select: none; -webkit-user-select: none;
   transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), border-color 200ms; }
 .bar button:active { transform: scale(0.97); }
@@ -54,6 +54,7 @@ a { color: var(--accent); }
 
 /* Presentation view */
 .deck { padding: 16px 16px 88px; }
+@media (max-width: 500px) { .deck { padding-bottom: 140px; } }
 .deck:not(.reading) .slide { display: none; }
 .deck:not(.reading) .slide.current { display: block; }
 .deck:not(.reading) { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; }
