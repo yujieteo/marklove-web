@@ -249,7 +249,7 @@ let roleColors = {};
 export function setPalette(roles) {
     roleColors = roles;
     let css = "";
-    for (const [role, color] of Object.entries(roles)) css += `#highlight .r-${role}{color:${color}}`;
+    for (const [role, color] of Object.entries(roles)) css += `.highlight .r-${role}{color:${color}}`;
     let st = document.getElementById("role-colors");
     if (!st) { st = document.createElement("style"); st.id = "role-colors"; document.head.append(st); }
     st.textContent = css;
