@@ -55,7 +55,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Buttons take the look of .button in /shared/kowalski.css (rule 11). These are the variants. */
 .button.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 .button.danger { color: var(--red); }
-.button[disabled], .menu-item[disabled] { opacity: .45; cursor: default; }
+.menu-item[disabled] { opacity: .45; cursor: default; }
 /* Ghost buttons: no box, but the same hover fade and focus ring as .button. Export choices and link buttons get the ring too. */
 .title-btn, .iconbtn { transition: transform var(--press-duration) var(--ease-out), background-color var(--fade-duration), color var(--fade-duration); }
 .title-btn:focus-visible, .iconbtn:focus-visible, .choice:focus-visible, .linkbtn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
