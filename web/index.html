@@ -11,7 +11,7 @@
 <body>
 <a class="skip" href="#source">Skip to the editor</a>
 <header class="topbar" id="topbar">
-  <button type="button" id="title-menu" class="title-btn" aria-label="Project: Marklove"><span id="title-text">Marklove</span><span class="chev" aria-hidden="true">▾</span></button>
+  <button type="button" id="title-menu" class="title-btn" aria-label="Project: Marklove"><span id="title-text" class="title-text">Marklove</span><span class="chev" aria-hidden="true">▾</span></button>
   <div class="spacer"></div>
   <div id="edit-actions" class="actions">
     <button type="button" id="insert-btn" class="button tb" title="Insert slides, notes, math, tables, and media"><span class="ico" aria-hidden="true">＋</span><span class="lbl">Insert</span></button>
@@ -25,7 +25,7 @@
     <div id="view-picker"></div>
     <div id="style-picker" title="Show the slides in this style. Export uses the same style."></div>
     <button type="button" id="fullscreen-btn" class="button tb" title="Show the preview on the full screen"><span class="ico" aria-hidden="true">⛶</span><span class="lbl">Present</span></button>
-    <button type="button" id="edit-btn" class="button tb primary" title="Return to the editor (Escape)"><span class="lbl">Edit</span></button>
+    <button type="button" id="edit-btn" class="button tb primary edit-btn" title="Return to the editor (Escape)"><span class="lbl">Edit</span></button>
   </div>
 </header>
 <div id="banners"></div>
@@ -33,9 +33,9 @@
 <main id="workspace" class="workspace">
   <div id="editor-pane" class="editor-pane">
     <div id="editor" class="editor">
-      <pre id="highlight" class="layer" aria-hidden="true"></pre>
+      <pre id="highlight" class="layer highlight" aria-hidden="true"></pre>
       <div id="placeholder" class="layer placeholder" aria-hidden="true">Write in Markdown. Use Insert for slides, notes, math, and media.</div>
-      <textarea id="source" class="layer" spellcheck="true" autocapitalize="sentences" aria-label="Markdown source" aria-describedby="editor-hint"></textarea>
+      <textarea id="source" class="layer source" spellcheck="true" autocapitalize="sentences" aria-label="Markdown source" aria-describedby="editor-hint"></textarea>
       <span id="editor-hint" hidden>Write in Markdown. Use Insert for slides, notes, math, and media.</span>
     </div>
     <div id="eq-pop" class="eq-pop" role="region" aria-label="Equation preview" hidden></div>

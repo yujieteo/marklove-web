@@ -17,14 +17,13 @@
 }
 :root.contrast { --line: var(--muted); }
 .workspace { --bg: #FBF3DB; --surface: #ECE3CC; --border: #D5CDB6; --dim: #5F6764; --text: #53676D; --strong: #3A4D53; --accent: #0065BE; }
-[hidden] { display: none !important; }
 /* The app shell tracks the visible height, and a pull at the top of the editor does not reload the page.
    https://github.com/emilkowalski/skills/blob/a81dbca07f2217b7103e510c0f13f8d5b017afc9/skills/mobile-native/SKILL.md#3-layout-has-the-wrong-height */
 html, body { height: 100%; margin: 0; overscroll-behavior: none; }
 body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .skip { position: absolute; left: -999px; top: 0; z-index: 50; background: var(--chip); padding: .5rem 1rem; color: var(--ink); }
 .skip:focus { left: .5rem; top: .5rem; }
 .loading { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); color: var(--muted); z-index: 100; }
@@ -40,15 +39,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
   background: var(--chip); border-bottom: 1px solid var(--line); min-height: 52px; flex-wrap: wrap; }
 .title-btn { display: inline-flex; align-items: center; gap: 6px; min-height: var(--tap); max-width: min(46vw, 420px); padding: 0 10px; border-radius: var(--radius);
   border: 1px solid transparent; background: none; font-weight: 500; color: var(--ink); cursor: pointer; }
-.title-btn #title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title-btn .title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chev { color: var(--muted); font-size: var(--small); }
 .actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .actions[hidden] { display: none; }
 .tb { display: inline-flex; align-items: center; gap: 6px; }
-.tb .ico { font-size: 14px; line-height: 1; }
+.tb .ico { font-size: 0.875rem; line-height: 1; }
 @media (max-width: 560px) {
   .tb .lbl { display: none; }
-  #edit-btn .lbl { display: inline; }
+  .edit-btn .lbl { display: inline; }
   .title-btn { max-width: 40vw; }
 }
 
@@ -97,11 +96,11 @@ input[type=range] { accent-color: var(--accent); }
 .findbar[hidden] { display: none; }
 .find-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .find-row .glyph { color: var(--muted); width: 18px; text-align: center; }
-.find-row input, .find-row textarea { flex: 1; min-width: 140px; font-family: var(--doc); font-size: 15px; min-height: var(--tap); border: 1px solid var(--line);
+.find-row input, .find-row textarea { flex: 1; min-width: 140px; font-family: var(--doc); font-size: 0.9375rem; min-height: var(--tap); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 4px 8px; background: var(--bg); resize: vertical; }
 .find-status { font-size: var(--small); color: var(--muted); font-variant-numeric: tabular-nums; min-width: 4em; }
 .find-status.error, .error-text { color: var(--red); }
-.sam-output { font-family: var(--doc); font-size: 12px; white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line); border-radius: var(--frame-radius); padding: 8px 12px;
+.sam-output { font-family: var(--doc); font-size: 0.75rem; white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line); border-radius: var(--frame-radius); padding: 8px 12px;
   max-height: calc(7 * 17px + 16px); overflow: auto; margin: 0; }
 
 /* Workspace */
@@ -113,23 +112,23 @@ input[type=range] { accent-color: var(--accent); }
   font-family: var(--doc); font-size: var(--editor-size); line-height: var(--editor-line); letter-spacing: 0; tab-size: 4;
   white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; font-kerning: none; font-variant-ligatures: none; }
 .nowrap .layer { white-space: pre; overflow-wrap: normal; }
-#highlight { overflow: hidden; color: var(--text); pointer-events: none; }
-#highlight span.b { font-weight: 700; }
-#highlight span.i { font-style: italic; }
-#highlight .find-hit { background: color-mix(in srgb, var(--yellow) 28%, transparent); border-radius: 2px; }
-#source { background: transparent; color: transparent; caret-color: var(--accent); resize: none; outline: none; overflow: auto; z-index: 1; }
-#source::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); color: transparent; }
-#source:focus-visible { outline: none; }
+.highlight { overflow: hidden; color: var(--text); pointer-events: none; }
+.highlight span.b { font-weight: 700; }
+.highlight span.i { font-style: italic; }
+.highlight .find-hit { background: color-mix(in srgb, var(--yellow) 28%, transparent); border-radius: 2px; }
+.source { background: transparent; color: transparent; caret-color: var(--accent); resize: none; outline: none; overflow: auto; z-index: 1; }
+.source::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); color: transparent; }
+.source:focus-visible { outline: none; }
 .editor:focus-within { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
 .placeholder { color: var(--dim); pointer-events: none; }
 .placeholder[hidden] { display: none; }
 /* iOS zooms into a text field under 16 px and does not zoom out. Both editor layers change, so they stay aligned.
    https://github.com/emilkowalski/skills/blob/a81dbca07f2217b7103e510c0f13f8d5b017afc9/skills/mobile-native/SKILL.md#4-page-zooms-into-the-input */
 @media (pointer: coarse) {
-  .layer { font-size: max(16px, var(--editor-size)); }
-  .find-row input, .find-row textarea { font-size: 16px; }
+  .layer { font-size: max(1rem, var(--editor-size)); }
+  .find-row input, .find-row textarea { font-size: 1rem; }
 }
-.vim-normal #source { caret-color: transparent; }
+.vim-normal .source { caret-color: transparent; }
 .vim-cursor { background: color-mix(in srgb, var(--accent) 55%, transparent); color: var(--bg); border-radius: 1px; }
 
 .preview-pane { flex: 1; min-width: 0; display: flex; background: var(--bg); }
@@ -142,10 +141,10 @@ input[type=range] { accent-color: var(--accent); }
 .eq-pop { position: absolute; z-index: 5; right: 16px; bottom: 16px; max-width: min(600px, calc(100% - 32px)); min-width: 260px; padding: 12px 16px;
   box-shadow: 0 6px 24px rgb(0 0 0 / .18); }
 .eq-pop[hidden] { display: none; }
-.eq-math { font-family: "KpMath", serif; font-size: 22px; color: var(--strong); overflow-x: auto; padding: 4px 0; }
+.eq-math { font-family: "KpMath", serif; font-size: 1.375rem; color: var(--strong); overflow-x: auto; padding: 4px 0; }
 .eq-math math { font-family: "KpMath", serif; }
-.eq-spoken { color: var(--dim); font-size: 13px; margin: 6px 0; }
-.eq-foot { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
+.eq-spoken { color: var(--dim); font-size: 0.8125rem; margin: 6px 0; }
+.eq-foot { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--dim); }
 .eq-warn { color: var(--orange); }
 
 /* Status bar */
@@ -191,8 +190,9 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / .35); }
 .item-title { color: var(--ink); font-weight: 500; }
 .item-sub { font-size: var(--small); color: var(--muted); }
 .item-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-.code { font-family: var(--doc); font-size: 12px; white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line); border-radius: var(--frame-radius); padding: 10px 12px; margin: 6px 0; overflow-x: auto; }
-:not(pre) > code { font-family: var(--doc); font-size: .9em; background: var(--chip); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 .25em; }
+.code { font-family: var(--doc); font-size: 0.75rem; white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line); border-radius: var(--frame-radius); padding: 10px 12px; margin: 6px 0; overflow-x: auto; }
+/* Inline code follows the size of its text. */
+:not(pre) > code { font-family: var(--doc); font-size: 90%; background: var(--chip); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 .25em; }
 .code mark { background: color-mix(in srgb, var(--accent) 25%, transparent); color: inherit; text-decoration: underline; }
 
 /* Export */
@@ -219,7 +219,7 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / .35); }
 .progress progress { width: min(320px, 100%); }
 
 /* Diff */
-.diff-line { display: flex; gap: 8px; font-family: var(--doc); font-size: 14px; padding: 1px 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.diff-line { display: flex; gap: 8px; font-family: var(--doc); font-size: 0.875rem; padding: 1px 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .diff-line .n { color: var(--muted); min-width: 2.6em; text-align: right; flex: none; }
 .diff-line .s { font-weight: 700; flex: none; width: 1ch; }
 .diff-line.add { background: color-mix(in srgb, var(--green) 14%, transparent); }
@@ -242,8 +242,8 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / .35); }
 .speaker iframe.next { aspect-ratio: 16 / 10; max-height: 220px; }
 .speaker .ctl { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .timer { display: flex; align-items: center; gap: 10px; }
-.timer .time { font: 500 28px var(--mono); color: var(--ink); }
-.notes { font-family: var(--doc); font-size: 18px; white-space: pre-wrap; color: var(--ink); overflow: auto; flex: 1; min-height: 120px; }
+.timer .time { font: 500 1.75rem var(--mono); color: var(--ink); }
+.notes { font-family: var(--doc); font-size: 1.125rem; white-space: pre-wrap; color: var(--ink); overflow: auto; flex: 1; min-height: 120px; }
 .cap-label { font-size: var(--small); color: var(--muted); margin: 0; font-weight: 500; }
 dialog.sheet.full { width: calc(100vw - 16px); max-width: calc(100vw - 16px); height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); }
 dialog.sheet.full .sheet-body { display: flex; flex-direction: column; }
@@ -260,3 +260,5 @@ dialog.sheet.full .sheet-body { display: flex; flex-direction: column; }
 .preview-pane { position: relative; }
 .workspace.presenting .preview-pane iframe { border: 0; }
 .statusbar.in-preview { display: none; }
+/* Last in the file, so that it wins over each one-class rule that sets display. */
+[hidden] { display: none; }
