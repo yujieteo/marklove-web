@@ -55,7 +55,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Buttons take the look of .button in /shared/kowalski.css (rule 11). These are the variants. */
 .button.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 .button.danger { color: var(--red); }
-.button[disabled], .menu-item[disabled] { opacity: .45; cursor: default; }
 /* Ghost buttons: no box, but the same hover fade and focus ring as .button. Export choices and link buttons get the ring too. */
 .title-btn, .iconbtn { transition: transform var(--press-duration) var(--ease-out), background-color var(--fade-duration), color var(--fade-duration); }
 .title-btn:focus-visible, .iconbtn:focus-visible, .choice:focus-visible, .linkbtn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -92,7 +91,6 @@ input[type=range] { accent-color: var(--accent); }
 .banner .detail { color: var(--muted); font-size: var(--small); margin-top: 2px; }
 .banner .warn { color: var(--orange); }
 .iconbtn { min-width: var(--tap); min-height: var(--tap); border: none; background: none; border-radius: var(--radius); cursor: pointer; color: var(--muted); }
-.iconbtn[disabled] { opacity: .4; }
 
 /* Find bar */
 .findbar { padding: 8px 16px; background: var(--chip); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
@@ -203,7 +201,6 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / .35); }
 .form-section > .choice:first-of-type { border-top-left-radius: var(--frame-radius); border-top-right-radius: var(--frame-radius); }
 .form-section > .choice:last-of-type { border-bottom: 1px solid var(--line); border-bottom-left-radius: var(--frame-radius); border-bottom-right-radius: var(--frame-radius); }
 .choice[aria-checked="true"] { box-shadow: inset 3px 0 0 var(--accent); }
-.choice[disabled] { cursor: default; opacity: .6; }
 .choice .dot { width: 18px; color: var(--muted); flex: none; }
 .choice[aria-checked="true"] .dot { color: var(--accent); }
 .choice .name { color: var(--ink); }
