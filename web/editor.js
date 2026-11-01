@@ -431,11 +431,21 @@ function runVimKey(key) {
     catch (err) {
         if (!(err instanceof C.TooLarge)) throw err;
         vimMessage(err.message);
-        return true;
+        vimInsert();
+        return false;
     }
     if (!r.handled) return false;
     applyVim(r);
     return true;
+}
+
+// The engine does not run on a text over 512 KB: wait in Insert mode, so each key goes to the browser.
+export function vimInsert() {
+    if (!editor.vim || editor.vimMode === "insert") return;
+    editor.vimMode = "insert";
+    editor.box.classList.toggle("vim-normal", false);
+    paint();
+    editor.onVimState();
 }
 
 function vimMessage(m) {

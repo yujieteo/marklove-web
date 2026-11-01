@@ -1,0 +1,1 @@
+export const customizePanel = () => {}, helpPanel = () => {}, historyPanel = () => {}, outlinePanel = () => {}, projectsPanel = () => {}, renamePanel = () => {}, settingsPanel = () => {}, welcome = () => {};
