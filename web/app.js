@@ -56,10 +56,12 @@ function applyTheme() {
     E.setPalette(p.roles);
 }
 
-function applySettings() {
+function applySettings(reset = false) {
     applyTheme();
     E.setMetrics({ scale: S.settings.editorTextScale, spacing: S.settings.editorLineSpacing, wrap: S.settings.wrapLines });
-    if (E.editor.vim !== (S.settings.vimEnabled && !readOnly())) E.setVim(S.settings.vimEnabled && !readOnly());
+    const vim = S.settings.vimEnabled && !readOnly();
+    if (E.editor.vim !== vim || reset) E.setVim(vim);
+    if (vim && tooLarge(E.text())) E.vimInsert();
     updateStatus();
 }
 darkQuery.addEventListener("change", applyTheme);
@@ -134,7 +136,7 @@ async function openProject(id, { preview = false } = {}) {
     $("title-menu").title = p.name;
     document.title = p.name + " – Marklove";
     restoreEditorState();
-    applySettings();
+    applySettings(true);
     renderBanners();
     if (F.find.open) F.refresh();
     await refreshList();
@@ -274,6 +276,7 @@ function textChanged() {
     state.idleTimer = setTimeout(autoVersion, 30000);
     if (state.mode === "preview") schedulePreview();
     const big = tooLarge(E.text());
+    if (big) E.vimInsert();
     if (big !== state.wasLarge) { state.wasLarge = big; renderBanners(); }
     updateEquation();
 }
