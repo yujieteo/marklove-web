@@ -41,7 +41,7 @@ The script does 2 steps:
 ## Test
 
 ```sh
-node --test tests/*.test.mjs
+node --import ./tests/app_stubs/register.mjs --test tests/*.test.mjs
 ```
 
 The tests use the built core through `web/core.js`. The project ZIP test also runs `git fsck` on the exported history when Git is installed.
