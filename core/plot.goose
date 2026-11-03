@@ -1,21 +1,3 @@
-// Function plots: the `::: plot` division, as the app's Expression,
-// PlotSpec (Content/Plot.swift) and HTMLExporter.plot.
-//
-// Public functions:
-//   plot_reset()
-//       Sets the slider counter to 0. Call it once at the start of each
-//       document, as the app makes a new HTMLExporter.
-//   plot_html(out: u8[>..]&, body: u8[:], step_attr: u8[:], id_prefix: u8[:])
-//       Appends the HTML of the plot whose division body is `body`, the same
-//       bytes as HTMLExporter.plot. `step_attr` is ` data-step="n"` or empty.
-//       The slider ids are `<id_prefix>slider-<n>`, with n counted over the
-//       document from 1. An empty id_prefix gives the app's ids.
-//   plot_errors(out: u8[>..]&, body: u8[:])
-//       Appends the PlotSpec.parse errors, each one followed by "\n".
-//
-// The numbers go out as the app writes them: %.2f, %.2e and %.17g with
-// exact decimal rounding (as printf), and the shortest round-trip form for
-// a Swift `\(Double)`.
 
 import base;
 import std;
@@ -32,11 +14,7 @@ let PK_NEG = 3;
 let PK_BIN = 4;
 let PK_CALL = 5;
 
-// An expression node. BIN: op is the operator byte. CALL: op is the
-// function number, a the first argument in PARG, b the argument count.
 struct PNode { k: i64, op: i64, v: f64, a: i64, b: i64 }
-// A token: text at o, n in PSRC. k is 0 for a word or a number, otherwise
-// the operator byte (`**` is '^').
 struct PTok { o: i64, n: i64, k: i64 }
 struct PPar { no: i64, nn: i64, lo: f64, hi: f64, init: f64, lo_o: i64, lo_n: i64 }
 struct PCur { o: i64, n: i64, root: i64 }
@@ -45,7 +23,6 @@ struct PLine { a: i64, b: i64 }
 var PSRC: u8[>..] = [];
 var PN: PNode[>..] = [];
 var PARG: i64[>..] = [];
-// Call arguments while the parser reads them.
 var PSTK: i64[>..<] = [];
 var PT: PTok[>..] = [];
 var PI_AT = 0;
@@ -73,9 +50,7 @@ var PDIG: u8[>..] = [];
 
 fn plot_reset() { PCONTROLS = 0; }
 
-// ---- Characters, as Swift's Character properties for the usual scripts.
 
-// The code point at PSRC[i] and its byte length.
 fn pl_cp(i: i64) -> i64, i64 {
     let c = PSRC[i];
     if c < 0x80 { return c, 1; }
@@ -122,7 +97,6 @@ fn pl_is_letter(cp: i64) -> bool {
     return false;
 }
 
-// Trims spaces (CharacterSet.whitespaces) from PSRC[a..b].
 fn pl_trim(a: i64, b: i64) -> i64, i64 {
     var s = a;
     var e = b;
@@ -162,7 +136,6 @@ fn pl_src_lower_is(o: i64, n: i64, s: u8[:]) -> bool {
 fn pl_msg_src(o: i64, n: i64) { for i in o..o + n { PMSG.push(PSRC[i]); } }
 fn pl_err_src(o: i64, n: i64) { for i in o..o + n { PERR.push(PSRC[i]); } }
 
-// ---- Expressions
 
 fn pl_fail2(a: u8[:], o: i64, n: i64, b: u8[:]) {
     if PFAIL { return; }
@@ -182,7 +155,6 @@ fn pl_fail(a: u8[:]) {
     pl_msg_src(PEXPR_O, PEXPR_N);
 }
 
-// The token text as an error message shows it.
 fn pl_fail_tok(a: u8[:], t: PTok, b: u8[:]) {
     if t.k == 0 { pl_fail2(a, t.o, t.n, b); return; }
     if PFAIL { return; }
@@ -261,8 +233,6 @@ fn pl_tokenize(a: i64, b: i64) -> bool {
 
 fn pl_peek(k: i64) -> bool { PI_AT < PT.len && PT[PI_AT].k == k }
 
-// Swift's Double(String) on a token: a decimal number, or inf, infinity,
-// nan and snan in any case.
 fn pl_number(t: PTok) -> f64, bool {
     let c = PSRC[t.o];
     if is_digit(c) || c == '.' {
@@ -381,7 +351,6 @@ recursive fn pl_atom() -> i64 {
             let open = pl_peek('(');
             PI_AT++;
             if !open { pl_fail2("Expected ( after ", t.o, t.n, " in "); return -1; }
-            // The arguments wait on PSTK, above those of outer calls.
             let base = PSTK.len;
             let a0 = pl_sum();
             if a0 < 0 { return -1; }
@@ -399,7 +368,6 @@ recursive fn pl_atom() -> i64 {
             let count = PSTK.len - base;
             for k in base..PSTK.len { PARG.push(PSTK[k]); }
             PSTK.resize(base);
-            // log and ln are one function.
             let id = if f == 5 { 4 } else { f };
             return pl_node(PK_CALL, id, 0.0, start, count);
         }
@@ -408,7 +376,6 @@ recursive fn pl_atom() -> i64 {
     return -1;
 }
 
-// Parses PSRC[a..b]. Returns the root node, or -1 with the message in PMSG.
 fn pl_parse_expr(a: i64, b: i64, use_pars: bool) -> i64 {
     PFAIL = false;
     PEXPR_O = a;
@@ -452,7 +419,6 @@ recursive fn pl_eval(i: i64, x: f64, vals: f64[:]) -> f64 {
         }
         return m;
     }
-    // Swift evaluates every argument.
     for k in 1..n.b { let v = pl_eval(PARG[n.a + k], x, vals); }
     if f == 0 { return sin(a); }
     if f == 1 { return cos(a); }
@@ -471,7 +437,6 @@ recursive fn pl_eval(i: i64, x: f64, vals: f64[:]) -> f64 {
     return ceil(a);
 }
 
-// PlotSpec.constant: a finite value of an expression without x or sliders.
 fn pl_constant(a: i64, b: i64) -> f64, bool {
     let e = pl_parse_expr(a, b, false);
     if e < 0 { return 0.0, false; }
@@ -481,12 +446,9 @@ fn pl_constant(a: i64, b: i64) -> f64, bool {
     return v, true;
 }
 
-// ---- PlotSpec.parse
 
 fn pl_error(m: u8[:]) { PERR.append(m); PERR.push('\n'); PNERR++; }
 
-// Splits PSRC[a..b] at commas as Swift's split(separator:maxSplits:) with
-// empty parts left out. The parts go to po, pn, trimmed. Returns the count.
 fn pl_split(a: i64, b: i64, max_splits: i64, po: i64[8]&, pn: i64[8]&) -> i64 {
     var count = 0;
     var start = a;
@@ -561,7 +523,6 @@ fn pl_parse(body: u8[:]) {
             start = i + 1;
         }
     }
-    // Parameters first, because curves can use them.
     for li in PLN.len {
         let ln = PLN[li];
         guard pl_lower_prefix(ln.a, ln.b, "slider:") || pl_lower_prefix(ln.a, ln.b, "param:");
@@ -604,7 +565,6 @@ fn pl_parse(body: u8[:]) {
         guard ln.b > ln.a;
         if pl_lower_prefix(ln.a, ln.b, "slider:") || pl_lower_prefix(ln.a, ln.b, "param:") { continue; }
         let c0 = PSRC[ln.a];
-        // ^[xy]\s*:  and  ^y\s*=
         var j = ln.a + 1;
         while j < ln.b {
             let cp, m = pl_cp(j);
@@ -663,7 +623,6 @@ fn pl_parse(body: u8[:]) {
     if PCURS.len == 0 && PNERR == 0 { pl_error("Add a curve, for example: y = x^2"); }
 }
 
-// ---- Sampling and ranges
 
 fn pl_init_values() -> f64[>..] {
     var v: f64[>..] = [];
@@ -675,7 +634,6 @@ fn pl_sample_x(k: i64, count: i64) -> f64 {
     PX0 + (PX1 - PX0) * k / count
 }
 
-// PlotSpec.resolvedYRange with the initial values.
 fn pl_y_range() -> f64, f64 {
     if PHASY { return PY0, PY1; }
     var lo = 1.0 / 0.0;
@@ -706,7 +664,6 @@ fn pl_y_range() -> f64, f64 {
     return lo, hi;
 }
 
-// ---- Numbers, with exact decimal rounding
 
 fn pl_bits(x: f64) -> u64 {
     let a: f64[1] = [x];
@@ -717,14 +674,11 @@ fn pl_bits(x: f64) -> u64 {
 
 fn pl_neg(x: f64) -> bool { (pl_bits(x) >> 63) != 0 }
 
-// The exact decimal digits of |v| (finite, not 0) into d, with no leading
-// or trailing zeros. Returns the point p: |v| = 0.d * 10^p.
 fn pl_exact(v: f64, d: u8[>..]&) -> i64 {
     let m, e = pl_split_bits(v);
     return pl_exact_me(m, e, d);
 }
 
-// |v| = m * 2^e, with m < 2^53.
 fn pl_split_bits(v: f64) -> u64, i64 {
     let b = pl_bits(v);
     let be = ((b >> 52) & 0x7FF) as! i64;
@@ -733,7 +687,6 @@ fn pl_split_bits(v: f64) -> u64, i64 {
     return frac | 0x10000000000000, be - 1075;
 }
 
-// The exact decimal digits of m * 2^e (m > 0), as pl_exact.
 fn pl_exact_me(m0: u64, e: i64, d: u8[>..]&) -> i64 {
     d.clear();
     var m = m0;
@@ -776,7 +729,6 @@ fn pl_exact_me(m0: u64, e: i64, d: u8[>..]&) -> i64 {
     return point;
 }
 
-// m * 2^e as a double, by exact steps. The result must be a double.
 fn pl_make(m: u64, e: i64) -> f64 {
     var v: f64 = m;
     var k = e;
@@ -785,19 +737,15 @@ fn pl_make(m: u64, e: i64) -> f64 {
     return v;
 }
 
-// -1, 0 or 1 as 0.a * 10^pa compares with 0.b * 10^pb (no zeros at the ends).
 fn pl_dec_cmp(a: u8[:], pa: i64, b: u8[:], pb: i64) -> i64 {
     if pa != pb { return if pa < pb { -1 } else { 1 }; }
     let c = compare(a, b);
     return if c < 0 { -1 } else if c > 0 { 1 } else { 0 };
 }
 
-// A decimal number (digits, one point, an exponent) rounded correctly to
-// the nearest double, as strtod and Swift's Double(String) do.
 fn pl_parse_num(s: u8[:]) -> f64, bool {
     let g0, ok = parse_flt(s);
     if !ok { return 0.0, false; }
-    // The digits and the point of the text.
     var dig: u8[>..] = [];
     var point = 0;
     var i = 0;
@@ -827,7 +775,6 @@ fn pl_parse_num(s: u8[:]) -> f64, bool {
     var mid: u8[>..] = [];
     for step in 4 {
         let m, e = pl_split_bits(g);
-        // Above the midpoint with the next double: round up.
         let pu = pl_exact_me(2 * m + 1, e - 1, mid);
         let cu = pl_dec_cmp(dig, point, mid, pu);
         if cu > 0 || (cu == 0 && (m & 1) == 1) {
@@ -835,7 +782,6 @@ fn pl_parse_num(s: u8[:]) -> f64, bool {
             if is_inf(g) { return g, true; }
             continue;
         }
-        // Below the midpoint with the previous double: round down.
         let edge = m == 0x10000000000000 && e > -1074;
         var pd = 0;
         if edge { pd = pl_exact_me(4 * m - 1, e - 2, mid); } else { pd = pl_exact_me(2 * m - 1, e - 1, mid); }
@@ -849,8 +795,6 @@ fn pl_parse_num(s: u8[:]) -> f64, bool {
     return g, true;
 }
 
-// Keeps the first n digits of d (0.d * 10^point), rounded half to even.
-// Returns the new point. An empty d is zero.
 fn pl_round(d: u8[>..]&, point: i64, n: i64) -> i64 {
     if n >= d.len { return point; }
     if n < 0 { d.clear(); return point; }
@@ -891,7 +835,6 @@ fn pl_exp(out: u8[>..]&, x: i64) {
     format_int(out, a, 10, 0, ' ');
 }
 
-// printf %.<n>f
 fn pl_fixed(out: u8[>..]&, v: f64, n: i64) {
     if is_nan(v) { out.append("nan"); return; }
     if pl_neg(v) { out.push('-'); }
@@ -909,7 +852,6 @@ fn pl_fixed(out: u8[>..]&, v: f64, n: i64) {
     }
 }
 
-// printf %.2e
 fn pl_e2(out: u8[>..]&, v: f64) {
     if pl_neg(v) { out.push('-'); }
     if v == 0.0 { out.append("0.00e+00"); return; }
@@ -923,7 +865,6 @@ fn pl_e2(out: u8[>..]&, v: f64) {
     pl_exp(out, p - 1);
 }
 
-// The digits in PDIG at point p, as a %g or Swift layout writes them.
 fn pl_layout(out: u8[>..]&, p: i64, exp_form: bool, swift: bool) {
     if exp_form {
         out.push(PDIG[0]);
@@ -943,7 +884,6 @@ fn pl_layout(out: u8[>..]&, p: i64, exp_form: bool, swift: bool) {
     else if swift { out.append(".0"); }
 }
 
-// printf %.17g, as JSONSerialization writes a Double.
 fn pl_g17(out: u8[>..]&, v: f64) {
     if pl_neg(v) { out.push('-'); }
     if v == 0.0 { out.push('0'); return; }
@@ -953,7 +893,6 @@ fn pl_g17(out: u8[>..]&, v: f64) {
     pl_layout(out, p, x < -4 || x >= 17, false);
 }
 
-// Swift's `\(Double)`: the shortest digits that read back as v.
 fn pl_desc(out: u8[>..]&, v: f64) {
     if is_nan(v) { out.append("nan"); return; }
     if pl_neg(v) { out.push('-'); }
@@ -975,7 +914,6 @@ fn pl_desc(out: u8[>..]&, v: f64) {
     pl_layout(out, p, p < -3 || a > 9007199254740992.0, true);
 }
 
-// PlotSpec.format: three significant digits, or an exponent.
 fn pl_fmt(out: u8[>..]&, v: f64) {
     if v == 0.0 { out.push('0'); return; }
     if is_nan(v) { out.append("nan"); return; }
@@ -995,9 +933,7 @@ fn pl_fmt(out: u8[>..]&, v: f64) {
     out.append(s);
 }
 
-// ---- HTML
 
-// HTMLExporter.escape: & < > and ".
 fn pl_esc(out: u8[>..]&, s: u8[:]) {
     for c in s {
         if c == '&' { out.append("&amp;"); }
@@ -1010,7 +946,6 @@ fn pl_esc(out: u8[>..]&, s: u8[:]) {
 
 fn pl_esc_src(out: u8[>..]&, o: i64, n: i64) { pl_esc(out, PSRC[o..o + n]); }
 
-// A JSON string as JSONSerialization writes it.
 fn pl_json_str(out: u8[>..]&, s: u8[:]) {
     let hex = "0123456789abcdef";
     out.push('"');
@@ -1076,7 +1011,6 @@ fn pl_sy(y: f64, y0: f64, y1: f64) -> f64 {
     520.0 - 40.0 - (y - y0) / h * (520.0 - 20.0 - 40.0)
 }
 
-// PlotSpec.accessibilityDescription
 fn pl_description(out: u8[>..]&) {
     var t: u8[>..] = [];
     t.append("Plot of ");
@@ -1127,7 +1061,6 @@ fn plot_html(out: u8[>..]&, body: u8[:], step_attr: u8[:], id_prefix: u8[:]) {
     out.append("</span></p><svg viewBox=\"0 0 1000 520\" preserveAspectRatio=\"none\" role=\"img\" aria-label=\"");
     pl_description(out);
     out.append("\">");
-    // Axes
     let zy0 = if y0 >= 0.0 { y0 } else { 0.0 };
     let zy = if y1 < zy0 { y1 } else { zy0 };
     let zx0 = if PX0 >= 0.0 { PX0 } else { 0.0 };
@@ -1137,7 +1070,6 @@ fn plot_html(out: u8[>..]&, body: u8[:], step_attr: u8[:], id_prefix: u8[:]) {
     out.append("H980.00\"/><path class=\"axis\" d=\"M");
     pl_fixed(out, pl_sx(zx), 2);
     out.append(" 480.00V20.00\"/>");
-    // Curves
     let init = pl_init_values();
     let span = y1 - y0;
     for c, i in PCURS {

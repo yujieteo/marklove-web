@@ -1,47 +1,3 @@
-// Project packages: CRC-32, a ZIP writer with stored entries, a ZIP reader
-// with raw DEFLATE inflate, the project ZIP import rules, and SHA-1.
-// Ports Package/Zip.swift, the import part of Package/ProjectPackage.swift
-// and Git/SHA1.swift.
-//
-// Public functions:
-//
-//   zip_begin()
-//       Starts a new archive in the global builder.
-//   zip_add(name: u8[:], data: u8[:], mtime: i64) -> i64
-//       Adds one stored file. mtime is unix seconds; the DOS time is UTC.
-//       Returns 0 = added, 1 = invalid name, 2 = duplicate name, 3 = too large.
-//   zip_add_dir(name: u8[:], mtime: i64) -> i64
-//       Adds an empty folder entry ("name/"). Same codes as zip_add.
-//   zip_add_ref(name: u8[:], size: i64, crc: i64, mtime: i64) -> i64
-//       Adds one stored file whose bytes stay outside (in JavaScript): the
-//       caller writes them right after the bytes that zip_take gives next.
-//       Same codes as zip_add.
-//   zip_take(out)
-//       Appends the archive bytes so far to out and removes them from the
-//       builder, so that a large archive goes out in parts.
-//   zip_finish(out)
-//       Appends the rest of the archive to out and clears the builder.
-//   zip_crc32_update(crc: i64, data: u8[:]) -> i64
-//       Continues a CRC-32 (start with 0) over one more part of a file.
-//
-//   pack_import(zip: u8[:], out)
-//       Reads a project ZIP. Appends JSON to out:
-//         {"markdownName":"talk.md","markdown":"...",
-//          "assets":[{"path":"images/a.png","method":8,"offset":123,
-//                     "csize":100,"usize":120,"crc":4567}, ...],
-//          "warnings":["...", ...]}
-//       or {"error":"..."}. The asset bytes stay in the ZIP: JavaScript
-//       reads csize bytes at offset, inflates them for method 8 and checks
-//       usize and crc. The .git folder is not imported.
-//
-//   inflate(data: u8[:], limit: i64, out) -> bool
-//       Raw DEFLATE (RFC 1951). Appends at most limit bytes. On false,
-//       PK_ERR has the message.
-//   zip_crc32(data: u8[:]) -> i64
-//   sha1_hex(data: u8[:], out)      40 lower-case hex digits.
-//   sha1(data: u8[:], out)          the 20 digest bytes.
-//
-// Not ported: isListener (it needs the front matter; parse.goose has it).
 
 import std;
 import base;
@@ -67,7 +23,6 @@ fn pk_le32(out: u8[>..]&, v: i64) {
     pk_le16(out, v >> 16 & 0xFFFF);
 }
 
-// MARK: CRC-32 (IEEE)
 
 var CRC_T: u32[256] = [0; 256];
 var CRC_READY = false;
@@ -90,13 +45,10 @@ fn zip_crc32_update(prev: i64, data: u8[:]) -> i64 {
     return crc ^ 0xFFFFFFFF;
 }
 
-// MARK: ZIP writer
 
-// attr is the external attributes: the Unix mode << 16, and 0x10 for a folder.
 struct ZwEnt { no: i64, nn: i64, crc: i64, size: i64, off: i64, time: i64, date: i64, attr: i64 }
 
 var ZW_DATA: u8[>..] = [];
-// The archive bytes before ZW_DATA: taken by zip_take, or outside.
 var ZW_BASE = 0;
 var ZW_NAMES: u8[>..] = [];
 var ZW_ENTS: ZwEnt[>..] = [];
@@ -108,8 +60,6 @@ fn zip_begin() {
     ZW_ENTS.clear();
 }
 
-// A safe relative entry name, as ZipWriter.cleanName. False for absolute
-// paths, ":" and ".." segments.
 fn zip_clean_name(name: u8[:], out: u8[>..]&) -> bool {
     let start = out.len;
     if name.len > 0 && (name[0] == '/' || name[0] == '\\') { return false; }
@@ -129,11 +79,9 @@ fn zip_clean_name(name: u8[:], out: u8[>..]&) -> bool {
     return out.len > start;
 }
 
-// DOS time and date of a unix time, in UTC.
 fn zip_dos_time(t: i64) -> i64, i64 {
     let days = div_euclid(t, 86400);
     let secs = t - days * 86400;
-    // Civil date from days (H. Hinnant).
     let z = days + 719468;
     let era = div_euclid(z, 146097);
     let doe = z - era * 146097;
@@ -169,7 +117,6 @@ fn zip_take(out: u8[>..]&) {
     ZW_DATA.clear();
 }
 
-// The local header of a stored file, and its central directory entry.
 fn zip_header(name: u8[:], size: i64, crc: i64, mtime: i64) -> i64 {
     var clean: u8[>..] = [];
     if !zip_clean_name(name, clean) { return 1; }
@@ -182,9 +129,9 @@ fn zip_header(name: u8[:], size: i64, crc: i64, mtime: i64) -> i64 {
     let time, date = zip_dos_time(mtime);
     let off = ZW_BASE + ZW_DATA.len;
     pk_le32(ZW_DATA, 0x04034B50);
-    pk_le16(ZW_DATA, 20);        // version needed
-    pk_le16(ZW_DATA, 0x0800);    // UTF-8 names
-    pk_le16(ZW_DATA, 0);         // stored
+    pk_le16(ZW_DATA, 20);
+    pk_le16(ZW_DATA, 0x0800);
+    pk_le16(ZW_DATA, 0);
     pk_le16(ZW_DATA, time);
     pk_le16(ZW_DATA, date);
     pk_le32(ZW_DATA, crc);
@@ -197,8 +144,6 @@ fn zip_header(name: u8[:], size: i64, crc: i64, mtime: i64) -> i64 {
     return 0;
 }
 
-// Adds an empty folder entry; the name gets a "/" at the end. A folder that
-// is already there is not added again. Returns the same codes as zip_add.
 fn zip_add_dir(name: u8[:], mtime: i64) -> i64 {
     var clean: u8[>..] = [];
     if !zip_clean_name(name, clean) { return 1; }
@@ -231,7 +176,7 @@ fn zip_finish(out: u8[>..]&) {
     let central_start = ZW_BASE + ZW_DATA.len;
     for e in ZW_ENTS {
         pk_le32(ZW_DATA, 0x02014B50);
-        pk_le16(ZW_DATA, 0x031E);    // made by: Unix, 3.0
+        pk_le16(ZW_DATA, 0x031E);
         pk_le16(ZW_DATA, 20);
         pk_le16(ZW_DATA, 0x0800);
         pk_le16(ZW_DATA, 0);
@@ -244,8 +189,8 @@ fn zip_finish(out: u8[>..]&) {
         pk_le16(ZW_DATA, 0);
         pk_le16(ZW_DATA, 0);
         pk_le16(ZW_DATA, 0);
-        pk_le16(ZW_DATA, 0);          // internal attributes
-        pk_le32(ZW_DATA, e.attr);     // external attributes
+        pk_le16(ZW_DATA, 0);
+        pk_le32(ZW_DATA, e.attr);
         pk_le32(ZW_DATA, e.off);
         for i in e.no..e.no + e.nn { ZW_DATA.push(ZW_NAMES[i]); }
     }
@@ -262,7 +207,6 @@ fn zip_finish(out: u8[>..]&) {
     zip_begin();
 }
 
-// MARK: Inflate (RFC 1951)
 
 struct PkBits { pos: i64, buf: u64, cnt: i64, bad: bool }
 struct PkHuff { counts: i64[16], syms: i64[320] }
@@ -294,7 +238,6 @@ fn pk_huff(h: PkHuff&, lengths: i64[:]) {
     }
 }
 
-// A symbol, or -1 with PK_ERR set.
 fn pk_decode(h: PkHuff&, r: PkBits&, d: u8[:]) -> i64 {
     var code = 0;
     var first = 0;
@@ -415,17 +358,14 @@ fn inflate(d: u8[:], limit: i64, out: u8[>..]&) -> bool {
     return true;
 }
 
-// MARK: ZIP reader
 
 struct PkEnt { no: i64, nn: i64, method: i64, csize: i64, usize: i64, crc: i64, local: i64 }
 
 var PK_ENTS: PkEnt[>..] = [];
 var PK_NAMES: u8[>..] = [];
 
-// The largest total size Marklove extracts, to protect against ZIP bombs.
 let PK_MAX_TOTAL = 2000000000;
 
-// The length of a valid UTF-8 sequence at s[i], or 0.
 fn pk_utf8_at(s: u8[:], i: i64) -> i64 {
     let c = s[i];
     if c < 0x80 { return 1; }
@@ -456,7 +396,6 @@ fn pk_valid_utf8(s: u8[:]) -> bool {
     return true;
 }
 
-// Reads the central directory into PK_ENTS. On false, PK_ERR has the error.
 fn pk_read(d: u8[:]) -> bool {
     PK_ENTS.clear();
     PK_NAMES.clear();
@@ -482,7 +421,6 @@ fn pk_read(d: u8[:]) -> bool {
         let usize = pk_u32(d, p + 24);
         total += usize;
         if total > PK_MAX_TOTAL { return pk_fail("tooLarge"); }
-        // A name that is not UTF-8 gets U+FFFD for each bad byte.
         let no = PK_NAMES.len;
         var j = p + 46;
         while j < p + 46 + name_len {
@@ -503,8 +441,6 @@ fn pk_name(ei: i64, out: u8[>..]&) {
     for i in e.no..e.no + e.nn { out.push(PK_NAMES[i]); }
 }
 
-// Appends the bytes of entry ei. On false, out is as before and PK_ERR has
-// the error.
 fn pk_contents(d: u8[:], ei: i64, out: u8[>..]&) -> bool {
     let e = PK_ENTS[ei];
     let p = e.local;
@@ -544,15 +480,12 @@ fn pk_contents(d: u8[:], ei: i64, out: u8[>..]&) -> bool {
     return true;
 }
 
-// MARK: Project import
 
-// Asset files of the last import: path and ZIP entry, by index.
 struct PkFile { po: i64, pn: i64, ei: i64, data: i64 }
 
 var PK_FS: PkFile[>..] = [];
 var PK_FP: u8[>..] = [];
 
-// The last path component and its extension (empty when none).
 fn pk_last(s: u8[:]) -> u8[:] {
     var i = s.len;
     while i > 0 && s[i - 1] != '/' { i--; }
@@ -598,8 +531,6 @@ fn pk_find(path: u8[:]) -> i64 {
     return -1;
 }
 
-// Finds the bytes of entry ei for asset `path`, as `assets[path] = data`.
-// Returns false (with PK_ERR) when the entry cannot be read.
 fn pk_locate(z: u8[:], ei: i64, path: u8[:]) -> bool {
     let e = PK_ENTS[ei];
     let p = e.local;
@@ -675,7 +606,6 @@ fn pack_import(z: u8[:], out: u8[>..]&) {
         pk_error_json(out, "Marklove cannot read the Markdown file. Save it as UTF-8 text.");
         return;
     }
-    // Asset paths are relative to the folder of the Markdown file.
     var md_name: u8[>..] = [];
     pk_name(md, md_name);
     var folder: u8[>..] = [];
@@ -736,7 +666,6 @@ fn pack_import(z: u8[:], out: u8[>..]&) {
     out.append("]}");
 }
 
-// MARK: SHA-1
 
 fn sha1(data: u8[:], out: u8[>..]&) {
     var h: u32[5] = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0];

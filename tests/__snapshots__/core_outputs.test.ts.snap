@@ -1,0 +1,811 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`slides page output stays readable and stable 1`] = `
+"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="generator" content="Marklove">
+<title>Waves</title>
+<style></style>
+<style></style>
+<style>:root { color-scheme: light dark; --bg: #FBF3DB; --surface: #ECE3CC; --border: #D5CDB6; --dim: #5F6764; --text: #53676D; --strong: #3A4D53; --accent: #0065BE; --s1: #0065BE; --s2: #A54B0E; --s3: #377200; --s4: #B12F82; --s5: #0B7269; --s6: #7751B4; --kw: #377200; --str: #0B7269; --num: #B12F82; --com: #5F6764; --type: #7D6204; --fn: #0065BE; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #103C48; --surface: #184956; --border: #2D5B69; --dim: #9CB4BA; --text: #ADBCBC; --strong: #CAD8D9; --accent: #7CB2FA; --s1: #7CB2FA; --s2: #FE9559; --s3: #7EC242; --s4: #FE89CC; --s5: #41C7B9; --s6: #C29EFB; --kw: #7EC242; --str: #41C7B9; --num: #FE89CC; --com: #9CB4BA; --type: #DBB32D; --fn: #7CB2FA; } }
+:root[data-theme="dark"] { color-scheme: dark; --bg: #103C48; --surface: #184956; --border: #2D5B69; --dim: #9CB4BA; --text: #ADBCBC; --strong: #CAD8D9; --accent: #7CB2FA; --s1: #7CB2FA; --s2: #FE9559; --s3: #7EC242; --s4: #FE89CC; --s5: #41C7B9; --s6: #C29EFB; --kw: #7EC242; --str: #41C7B9; --num: #FE89CC; --com: #9CB4BA; --type: #DBB32D; --fn: #7CB2FA; }
+:root[data-theme="light"] { color-scheme: light; }
+@media (prefers-contrast: more) {
+  :root { --bg: #FBF3DB; --surface: #ECE3CC; --border: #7D7F73; --dim: #424A47; --text: #394C52; --strong: #394C52; --accent: #04498A; --s1: #04498A; --s2: #7C3300; --s3: #275304; --s4: #8A1062; --s5: #08524B; --s6: #5B3393; --kw: #275304; --str: #08524B; --num: #8A1062; --com: #424A47; --type: #5A4706; --fn: #04498A; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #103C48; --surface: #184956; --border: #89AAB3; --dim: #C6DFE5; --text: #CDDCDC; --strong: #CEDCDD; --accent: #C4DCFC; --s1: #C4DCFC; --s2: #FDD1BA; --s3: #A5EC6E; --s4: #FECDE6; --s5: #6FEFE0; --s6: #E1D3FC; --kw: #A5EC6E; --str: #6FEFE0; --num: #FECDE6; --com: #C6DFE5; --type: #FFD659; --fn: #C4DCFC; } }
+  :root[data-theme="dark"] { --bg: #103C48; --surface: #184956; --border: #89AAB3; --dim: #C6DFE5; --text: #CDDCDC; --strong: #CEDCDD; --accent: #C4DCFC; --s1: #C4DCFC; --s2: #FDD1BA; --s3: #A5EC6E; --s4: #FECDE6; --s5: #6FEFE0; --s6: #E1D3FC; --kw: #A5EC6E; --str: #6FEFE0; --num: #FECDE6; --com: #C6DFE5; --type: #FFD659; --fn: #C4DCFC; }
+}</style>
+</head>
+<body>
+<a class="skip" href="#deck">Skip to the presentation</a>
+<main id="deck" class="deck takahashi" aria-label="Waves">
+<section class="slide kind-title" id="waves" data-steps="1" aria-roledescription="slide" aria-label="1 of 6: Waves"><div class="frame"><h1>Waves</h1><p class="subtitle">Sound and light</p><p class="byline">A. Writer</p></div></section>
+<section class="slide kind-section" id="sound" data-steps="1" aria-roledescription="slide" aria-label="2 of 6: Sound"><div class="frame"><p class="number">Part 1</p><h1>Sound</h1></div></section>
+<section class="slide kind-content" id="speed" data-steps="1" aria-roledescription="slide" aria-label="3 of 6: Speed"><div class="frame"><p class="statement">Speed</p></div></section>
+<section class="slide kind-content" id="speed-2" data-steps="1" aria-roledescription="slide" aria-label="4 of 6: Speed is v = f\\lambda."><div class="frame"><p class="statement">Speed is <math><semantics><mrow><mi>v</mi><mo>=</mo><mi>f</mi><mi>λ</mi></mrow><annotation encoding="application/x-tex">v = f\\lambda</annotation></semantics></math>.</p></div></section>
+<section class="slide kind-content" id="speed-3" data-steps="1" aria-roledescription="slide" aria-label="5 of 6: Slide"><div class="frame"><div class="plot" data-plot="{&quot;curves&quot;:[&quot;sin(x)&quot;],&quot;params&quot;:[],&quot;x&quot;:[0,6.2800000000000002],&quot;y&quot;:[-2,2]}"><p class="labels"><span></span><span>-2 to 2</span></p><svg viewBox="0 0 1000 520" preserveAspectRatio="none" role="img" aria-label="Plot of y = sin(x) for x from 0 to 6.28."><path class="axis" d="M60.00 250.00H980.00"/><path class="axis" d="M60.00 480.00V20.00"/><path class="curve" style="stroke:var(--s1)" d="M60.00 250.00L63.83 246.99L67.67 243.98L71.50 240.98L75.33 237.99L79.17 235.00L83.00 232.02L86.83 229.05L90.67 226.10L94.50 223.17L98.33 220.25L102.17 217.35L106.00 214.48L109.83 211.63L113.67 208.81L117.50 206.01L121.33 203.25L125.17 200.51L129.00 197.82L132.83 195.15L136.67 192.53L140.50 189.94L144.33 187.39L148.17 184.89L152.00 182.43L155.83 180.02L159.67 177.66L163.50 175.34L167.33 173.08L171.17 170.87L175.00 168.72L178.83 166.61L182.67 164.57L186.50 162.59L190.33 160.66L194.17 158.80L198.00 157.00L201.83 155.26L205.67 153.58L209.50 151.98L213.33 150.44L217.17 148.97L221.00 147.56L224.83 146.23L228.67 144.97L232.50 143.78L236.33 142.66L240.17 141.62L244.00 140.65L247.83 139.76L251.67 138.94L255.50 138.20L259.33 137.53L263.17 136.94L267.00 136.43L270.83 135.99L274.67 135.64L278.50 135.36L282.33 135.16L286.17 135.04L290.00 135.00L293.83 135.04L297.67 135.15L301.50 135.35L305.33 135.62L309.17 135.97L313.00 136.40L316.83 136.91L320.67 137.49L324.50 138.15L328.33 138.89L332.17 139.71L336.00 140.59L339.83 141.56L343.67 142.60L347.50 143.71L351.33 144.90L355.17 146.15L359.00 147.48L362.83 148.88L366.67 150.35L370.50 151.88L374.33 153.48L378.17 155.15L382.00 156.89L385.83 158.69L389.67 160.55L393.50 162.47L397.33 164.45L401.17 166.49L405.00 168.59L408.83 170.74L412.67 172.95L416.50 175.21L420.33 177.52L424.17 179.88L428.00 182.29L431.83 184.74L435.67 187.24L439.50 189.78L443.33 192.37L447.17 194.99L451.00 197.65L454.83 200.35L458.67 203.08L462.50 205.84L466.33 208.64L470.17 211.46L474.00 214.31L477.83 217.18L481.67 220.07L485.50 222.99L489.33 225.92L493.17 228.87L497.00 231.84L500.83 234.82L504.67 237.80L508.50 240.80L512.33 243.80L516.17 246.81L520.00 249.82L523.83 252.83L527.67 255.83L531.50 258.84L535.33 261.83L539.17 264.82L543.00 267.80L546.83 270.77L550.67 273.72L554.50 276.65L558.33 279.57L562.17 282.47L566.00 285.35L569.83 288.20L573.67 291.02L577.50 293.82L581.33 296.59L585.17 299.32L589.00 302.02L592.83 304.69L596.67 307.31L600.50 309.90L604.33 312.45L608.17 314.96L612.00 317.42L615.83 319.83L619.67 322.20L623.50 324.52L627.33 326.78L631.17 329.00L635.00 331.16L638.83 333.26L642.67 335.31L646.50 337.29L650.33 339.22L654.17 341.09L658.00 342.90L661.83 344.64L665.67 346.32L669.50 347.93L673.33 349.47L677.17 350.95L681.00 352.35L684.83 353.69L688.67 354.96L692.50 356.15L696.33 357.27L700.17 358.32L704.00 359.29L707.83 360.19L711.67 361.01L715.50 361.76L719.33 362.43L723.17 363.03L727.00 363.54L730.83 363.98L734.67 364.34L738.50 364.62L742.33 364.83L746.17 364.95L750.00 365.00L753.83 364.97L757.67 364.86L761.50 364.67L765.33 364.40L769.17 364.05L773.00 363.63L776.83 363.13L780.67 362.55L784.50 361.89L788.33 361.16L792.17 360.35L796.00 359.46L799.83 358.50L803.67 357.47L807.50 356.36L811.33 355.18L815.17 353.93L819.00 352.60L822.83 351.21L826.67 349.75L830.50 348.21L834.33 346.61L838.17 344.95L842.00 343.22L845.83 341.43L849.67 339.57L853.50 337.65L857.33 335.67L861.17 333.64L865.00 331.54L868.83 329.39L872.67 327.19L876.50 324.93L880.33 322.63L884.17 320.27L888.00 317.86L891.83 315.41L895.67 312.91L899.50 310.37L903.33 307.79L907.17 305.17L911.00 302.51L914.83 299.82L918.67 297.09L922.50 294.33L926.33 291.53L930.17 288.71L934.00 285.87L937.83 283.00L941.67 280.10L945.50 277.19L949.33 274.26L953.17 271.31L957.00 268.34L960.83 265.37L964.67 262.38L968.50 259.38L972.33 256.38L976.17 253.37L980.00 250.37"/></svg><p class="labels"><span>0</span><span></span><span>6.28</span></p></div></div></section>
+<section class="slide kind-content" id="speed-4" data-steps="1" aria-roledescription="slide" aria-label="6 of 6: Slide"><div class="frame"><div class="chart"><p class="labels"><span>Speed (m/s)</span></p><svg viewBox="0 0 1000 480" role="group" aria-label="Bar chart. Air: 343; Water: 1480."><path d="M20.0 420.0H980.0" stroke="currentColor" stroke-width="2"/><rect class="bar-rect" tabindex="0" role="img" aria-label="Air: 343" x="92.0" y="327.3" width="309.1" height="92.7" fill="var(--s1)"><title>Air: 343</title></rect><text class="tick" x="260.0" y="456.0" text-anchor="middle" font-size="26">Air</text><rect class="bar-rect" tabindex="0" role="img" aria-label="Water: 1480" x="572.0" y="20.0" width="309.1" height="400.0" fill="var(--s1)"><title>Water: 1480</title></rect><text class="tick" x="740.0" y="456.0" text-anchor="middle" font-size="26">Water</text></svg><p class="readout" aria-live="polite"></p><details><summary>Data table</summary><table><thead><tr><th scope="col">Material</th><th scope="col" class="right">Speed (m/s)</th></tr></thead><tbody><tr><td>Air</td><td class="right">343</td></tr><tr><td>Water</td><td class="right">1480</td></tr></tbody></table></details></div></div></section>
+</main>
+<nav class="bar" aria-label="Presentation controls">
+<button id="prev" type="button" aria-label="Previous">Previous</button>
+<span id="counter" class="counter"></span>
+<button id="next" type="button" aria-label="Next">Next</button>
+<button id="view" type="button" aria-pressed="false">Reading view</button>
+</nav>
+<div id="live" class="visually-hidden" aria-live="polite"></div>
+<script></script>
+</body>
+</html>
+"
+`;
+
+exports[`article page output stays readable and stable 1`] = `
+"<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="generator" content="Marklove">
+<meta name="author" content="A. Writer">
+<title>Waves</title>
+<style></style>
+<style>:root { color-scheme: light dark; --bg: #FBF3DB; --surface: #ECE3CC; --border: #D5CDB6; --dim: #5F6764; --text: #53676D; --strong: #3A4D53; --accent: #0065BE; --s1: #0065BE; --s2: #A54B0E; --s3: #377200; --s4: #B12F82; --s5: #0B7269; --s6: #7751B4; --kw: #377200; --str: #0B7269; --num: #B12F82; --com: #5F6764; --type: #7D6204; --fn: #0065BE; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #103C48; --surface: #184956; --border: #2D5B69; --dim: #9CB4BA; --text: #ADBCBC; --strong: #CAD8D9; --accent: #7CB2FA; --s1: #7CB2FA; --s2: #FE9559; --s3: #7EC242; --s4: #FE89CC; --s5: #41C7B9; --s6: #C29EFB; --kw: #7EC242; --str: #41C7B9; --num: #FE89CC; --com: #9CB4BA; --type: #DBB32D; --fn: #7CB2FA; } }
+:root[data-theme="dark"] { color-scheme: dark; --bg: #103C48; --surface: #184956; --border: #2D5B69; --dim: #9CB4BA; --text: #ADBCBC; --strong: #CAD8D9; --accent: #7CB2FA; --s1: #7CB2FA; --s2: #FE9559; --s3: #7EC242; --s4: #FE89CC; --s5: #41C7B9; --s6: #C29EFB; --kw: #7EC242; --str: #41C7B9; --num: #FE89CC; --com: #9CB4BA; --type: #DBB32D; --fn: #7CB2FA; }
+:root[data-theme="light"] { color-scheme: light; }
+@media (prefers-contrast: more) {
+  :root { --bg: #FBF3DB; --surface: #ECE3CC; --border: #7D7F73; --dim: #424A47; --text: #394C52; --strong: #394C52; --accent: #04498A; --s1: #04498A; --s2: #7C3300; --s3: #275304; --s4: #8A1062; --s5: #08524B; --s6: #5B3393; --kw: #275304; --str: #08524B; --num: #8A1062; --com: #424A47; --type: #5A4706; --fn: #04498A; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #103C48; --surface: #184956; --border: #89AAB3; --dim: #C6DFE5; --text: #CDDCDC; --strong: #CEDCDD; --accent: #C4DCFC; --s1: #C4DCFC; --s2: #FDD1BA; --s3: #A5EC6E; --s4: #FECDE6; --s5: #6FEFE0; --s6: #E1D3FC; --kw: #A5EC6E; --str: #6FEFE0; --num: #FECDE6; --com: #C6DFE5; --type: #FFD659; --fn: #C4DCFC; } }
+  :root[data-theme="dark"] { --bg: #103C48; --surface: #184956; --border: #89AAB3; --dim: #C6DFE5; --text: #CDDCDC; --strong: #CEDCDD; --accent: #C4DCFC; --s1: #C4DCFC; --s2: #FDD1BA; --s3: #A5EC6E; --s4: #FECDE6; --s5: #6FEFE0; --s6: #E1D3FC; --kw: #A5EC6E; --str: #6FEFE0; --num: #FECDE6; --com: #C6DFE5; --type: #FFD659; --fn: #C4DCFC; }
+}</style>
+</head>
+<body>
+<a class="skip" href="#text">Skip to the text</a>
+<article id="text">
+<header><h1>Waves</h1><p class="subtitle">Sound and light</p><p class="byline">A. Writer</p></header>
+
+
+<h2 id="s-sound">Sound</h2>
+<h3 id="s-speed">Speed</h3>
+<p>Speed is <math><semantics><mrow><mi>v</mi><mo>=</mo><mi>f</mi><mi>λ</mi></mrow><annotation encoding="application/x-tex">v = f\\lambda</annotation></semantics></math>.</p>
+<div class="plot" data-plot="{&quot;curves&quot;:[&quot;sin(x)&quot;],&quot;params&quot;:[],&quot;x&quot;:[0,6.2800000000000002],&quot;y&quot;:[-2,2]}"><p class="labels"><span></span><span>-2 to 2</span></p><svg viewBox="0 0 1000 520" preserveAspectRatio="none" role="img" aria-label="Plot of y = sin(x) for x from 0 to 6.28."><path class="axis" d="M60.00 250.00H980.00"/><path class="axis" d="M60.00 480.00V20.00"/><path class="curve" style="stroke:var(--s1)" d="M60.00 250.00L63.83 246.99L67.67 243.98L71.50 240.98L75.33 237.99L79.17 235.00L83.00 232.02L86.83 229.05L90.67 226.10L94.50 223.17L98.33 220.25L102.17 217.35L106.00 214.48L109.83 211.63L113.67 208.81L117.50 206.01L121.33 203.25L125.17 200.51L129.00 197.82L132.83 195.15L136.67 192.53L140.50 189.94L144.33 187.39L148.17 184.89L152.00 182.43L155.83 180.02L159.67 177.66L163.50 175.34L167.33 173.08L171.17 170.87L175.00 168.72L178.83 166.61L182.67 164.57L186.50 162.59L190.33 160.66L194.17 158.80L198.00 157.00L201.83 155.26L205.67 153.58L209.50 151.98L213.33 150.44L217.17 148.97L221.00 147.56L224.83 146.23L228.67 144.97L232.50 143.78L236.33 142.66L240.17 141.62L244.00 140.65L247.83 139.76L251.67 138.94L255.50 138.20L259.33 137.53L263.17 136.94L267.00 136.43L270.83 135.99L274.67 135.64L278.50 135.36L282.33 135.16L286.17 135.04L290.00 135.00L293.83 135.04L297.67 135.15L301.50 135.35L305.33 135.62L309.17 135.97L313.00 136.40L316.83 136.91L320.67 137.49L324.50 138.15L328.33 138.89L332.17 139.71L336.00 140.59L339.83 141.56L343.67 142.60L347.50 143.71L351.33 144.90L355.17 146.15L359.00 147.48L362.83 148.88L366.67 150.35L370.50 151.88L374.33 153.48L378.17 155.15L382.00 156.89L385.83 158.69L389.67 160.55L393.50 162.47L397.33 164.45L401.17 166.49L405.00 168.59L408.83 170.74L412.67 172.95L416.50 175.21L420.33 177.52L424.17 179.88L428.00 182.29L431.83 184.74L435.67 187.24L439.50 189.78L443.33 192.37L447.17 194.99L451.00 197.65L454.83 200.35L458.67 203.08L462.50 205.84L466.33 208.64L470.17 211.46L474.00 214.31L477.83 217.18L481.67 220.07L485.50 222.99L489.33 225.92L493.17 228.87L497.00 231.84L500.83 234.82L504.67 237.80L508.50 240.80L512.33 243.80L516.17 246.81L520.00 249.82L523.83 252.83L527.67 255.83L531.50 258.84L535.33 261.83L539.17 264.82L543.00 267.80L546.83 270.77L550.67 273.72L554.50 276.65L558.33 279.57L562.17 282.47L566.00 285.35L569.83 288.20L573.67 291.02L577.50 293.82L581.33 296.59L585.17 299.32L589.00 302.02L592.83 304.69L596.67 307.31L600.50 309.90L604.33 312.45L608.17 314.96L612.00 317.42L615.83 319.83L619.67 322.20L623.50 324.52L627.33 326.78L631.17 329.00L635.00 331.16L638.83 333.26L642.67 335.31L646.50 337.29L650.33 339.22L654.17 341.09L658.00 342.90L661.83 344.64L665.67 346.32L669.50 347.93L673.33 349.47L677.17 350.95L681.00 352.35L684.83 353.69L688.67 354.96L692.50 356.15L696.33 357.27L700.17 358.32L704.00 359.29L707.83 360.19L711.67 361.01L715.50 361.76L719.33 362.43L723.17 363.03L727.00 363.54L730.83 363.98L734.67 364.34L738.50 364.62L742.33 364.83L746.17 364.95L750.00 365.00L753.83 364.97L757.67 364.86L761.50 364.67L765.33 364.40L769.17 364.05L773.00 363.63L776.83 363.13L780.67 362.55L784.50 361.89L788.33 361.16L792.17 360.35L796.00 359.46L799.83 358.50L803.67 357.47L807.50 356.36L811.33 355.18L815.17 353.93L819.00 352.60L822.83 351.21L826.67 349.75L830.50 348.21L834.33 346.61L838.17 344.95L842.00 343.22L845.83 341.43L849.67 339.57L853.50 337.65L857.33 335.67L861.17 333.64L865.00 331.54L868.83 329.39L872.67 327.19L876.50 324.93L880.33 322.63L884.17 320.27L888.00 317.86L891.83 315.41L895.67 312.91L899.50 310.37L903.33 307.79L907.17 305.17L911.00 302.51L914.83 299.82L918.67 297.09L922.50 294.33L926.33 291.53L930.17 288.71L934.00 285.87L937.83 283.00L941.67 280.10L945.50 277.19L949.33 274.26L953.17 271.31L957.00 268.34L960.83 265.37L964.67 262.38L968.50 259.38L972.33 256.38L976.17 253.37L980.00 250.37"/></svg><p class="labels"><span>0</span><span></span><span>6.28</span></p></div>
+<div class="chart"><p class="labels"><span>Speed (m/s)</span></p><svg viewBox="0 0 1000 480" role="group" aria-label="Bar chart. Air: 343; Water: 1480."><path d="M20.0 420.0H980.0" stroke="currentColor" stroke-width="2"/><rect class="bar-rect" tabindex="0" role="img" aria-label="Air: 343" x="92.0" y="327.3" width="309.1" height="92.7" fill="var(--s1)"><title>Air: 343</title></rect><text class="tick" x="260.0" y="456.0" text-anchor="middle" font-size="26">Air</text><rect class="bar-rect" tabindex="0" role="img" aria-label="Water: 1480" x="572.0" y="20.0" width="309.1" height="400.0" fill="var(--s1)"><title>Water: 1480</title></rect><text class="tick" x="740.0" y="456.0" text-anchor="middle" font-size="26">Water</text></svg><p class="readout" aria-live="polite"></p><details><summary>Data table</summary><table><thead><tr><th scope="col">Material</th><th scope="col" class="right">Speed (m/s)</th></tr></thead><tbody><tr><td>Air</td><td class="right">343</td></tr><tr><td>Water</td><td class="right">1480</td></tr></tbody></table></details></div>
+
+</article>
+<script></script>
+</body>
+</html>
+"
+`;
+
+exports[`narration, transcript, SRT and revised Markdown stay stable 1`] = `
+"---
+title: Waves
+subtitle: Sound and light
+author: A. Writer
+---
+
+# Sound
+
+## Speed
+
+Speed is $v = f\\lambda$.
+
+. . .
+
+::: plot
+x: 0, 6.28
+y: -2, 2
+y = sin(x)
+:::
+
+::: chart bar
+| Material | Speed (m/s) |
+| --- | ---: |
+| Air | 343 |
+| Water | 1480 |
+:::
+
+::: notes
+Say hello.
+:::
+
+::: public-notes
+Thank you.
+:::
+"
+`;
+
+exports[`narration, transcript, SRT and revised Markdown stay stable 2`] = `
+"[Title]
+
+Waves. Sound and light.
+
+[Sound]
+
+Part 1. Sound.
+
+[Speed]
+
+Speed.
+"
+`;
+
+exports[`narration, transcript, SRT and revised Markdown stay stable 3`] = `
+"Waves
+=====
+
+Waves. Sound and light.
+
+Sound
+-----
+Part 1. Sound.
+
+Speed
+-----
+Speed.
+"
+`;
+
+exports[`narration, transcript, SRT and revised Markdown stay stable 4`] = `
+"1
+00:00:00,300 --> 00:00:01,100
+Waves.
+
+2
+00:00:01,400 --> 00:00:02,785
+Sound and light.
+
+3
+00:00:03,685 --> 00:00:04,608
+Part 1.
+
+4
+00:00:04,908 --> 00:00:05,708
+Sound.
+
+5
+00:00:06,608 --> 00:00:07,408
+Speed.
+
+"
+`;
+
+exports[`listener Markdown, asset lists and revision prompt stay stable 1`] = `
+"---
+marklove: listener
+title: Waves
+subtitle: Sound and light
+author: A. Writer
+---
+
+# Sound
+
+## Speed
+
+Speed is $v = f\\lambda$.
+
+. . .
+
+::: plot
+x: 0, 6.28
+y: -2, 2
+y = sin(x)
+:::
+
+::: chart bar
+| Material | Speed (m/s) |
+| --- | ---: |
+| Air | 343 |
+| Water | 1480 |
+:::
+
+
+::: public-notes
+Thank you.
+:::
+"
+`;
+
+exports[`listener Markdown, asset lists and revision prompt stay stable 2`] = `[]`;
+
+exports[`listener Markdown, asset lists and revision prompt stay stable 3`] = `[]`;
+
+exports[`listener Markdown, asset lists and revision prompt stay stable 4`] = `
+"Revise the Marklove presentation at the end of this message. Keep its content, facts, and order. Change every sentence that breaks the rules in part A. Add interactive content where part C applies. Marklove makes slides, Takahashi slides (one large sentence on each slide), an article, a handout, an interactive web page, and videos from this one file. Follow every rule below.
+
+A. SENTENCES (each sentence becomes one Takahashi slide)
+1. Each sentence has 12 words or fewer and 90 characters or fewer, spaces included. Math counts as one word.
+2. Each sentence holds one idea. If a sentence needs "and", "but", "which", or a comma to join two ideas, write two sentences.
+3. End each sentence with a period, a question mark, or an exclamation mark. Do not use semicolons.
+4. Write complete sentences. Do not cut a sentence over two lines, two bullets, or two slides.
+5. Use the active voice and common words. Put the main word near the start.
+6. A paragraph has three sentences or fewer. A bullet is one short sentence.
+7. A slide title has six words or fewer.
+Before you answer, count the words in each sentence. Split every sentence that is too long.
+
+B. STRUCTURE
+1. Start with front matter:
+   ---
+   title: The title
+   subtitle: An optional subtitle
+   author: The author
+   ---
+2. Write "# Section" for a section and "## Slide title" for each slide. Put one idea on each slide.
+3. Write ordinary Markdown: paragraphs, lists, **bold**, *italic*, \`code\`, [links](https://example.com), and tables.
+4. Put ". . ." on its own line to show the next part on the next click. Use it to build an argument step by step.
+5. Put text for the article only between <!-- article --> and <!-- /article --> on separate lines. Use <!-- slides --> and <!-- /slides --> for text on slides only. Longer explanations go in the article.
+
+C. INTERACTIVE CONTENT (use it wherever the content has numbers, change, or a derivation)
+1. A relation between quantities: add a plot with a slider, so the reader can change a value and see the effect.
+   ::: plot
+   x: 0, 6.28
+   y: -2, 2
+   xlabel: time t (s)
+   ylabel: displacement y (m)
+   slider: A, 0.5, 2, 1, Amplitude A
+   slider: w, 0.5, 3, 1, Frequency w
+   y = A*sin(w*x)
+   :::
+   A plot can use numbers, x, slider names, pi, e, + - * / ^, and sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, exp, log, sqrt, abs, floor, ceil, min, and max. Do not use other functions.
+2. A comparison of numbers: add a bar chart. The first column holds the labels. Each other column holds one series of numbers. Give the unit in the header.
+   ::: chart bar
+   | Material | Speed of sound (m/s) |
+   | --- | ---: |
+   | Air | 343 |
+   | Water | 1480 |
+   :::
+3. A derivation: show the equations one step at a time.
+   ::: morph
+   $$a = b + c$$
+   $$a - c = b$$
+   :::
+4. A main result: give it its own slide, with one display equation or one sentence.
+5. Use only real data. If you do not know a value, write [value] and say so in a note.
+
+D. MATH, IMAGES, AND SPOKEN TEXT
+1. Write math in LaTeX: $x^2$ in a sentence, and $$ ... $$ on separate lines for display math. Use one equation in each $$ block. Do not use \\begin{...} environments.
+2. Write images as ![Description of the image](images/file.png "Optional caption"). Always write a description that tells what the image shows and why it matters.
+3. After each equation, plot, chart, or image, add an explanation in words. Narration reads it aloud, and screen readers use it.
+   ::: explain
+   The curve keeps its shape and gets smaller as time passes.
+   :::
+4. Put private speaker notes in "::: notes" ... ":::". Put notes for the audience and the handout in "::: public-notes" ... ":::".
+5. Put spoken text for a whole slide in "::: narration" ... ":::". Write math in words in spoken text, for example "x squared".
+6. Do not use color alone to give meaning. Do not add HTML or scripts.
+
+Return only the Markdown, in one code block.
+
+The presentation:
+
+\`\`\`\`markdown
+---
+marklove: listener
+title: Waves
+subtitle: Sound and light
+author: A. Writer
+---
+
+# Sound
+
+## Speed
+
+Speed is $v = f\\lambda$.
+
+. . .
+
+::: plot
+x: 0, 6.28
+y: -2, 2
+y = sin(x)
+:::
+
+::: chart bar
+| Material | Speed (m/s) |
+| --- | ---: |
+| Air | 343 |
+| Water | 1480 |
+:::
+
+
+::: public-notes
+Thank you.
+:::
+\`\`\`\`
+"
+`;
+
+exports[`authoring prompt keeps its rules 1`] = `
+"Write a presentation as Marklove Markdown. Marklove makes slides, Takahashi slides (one large sentence on each slide), an article, a handout, an interactive web page, and videos from this one file. Follow every rule below.
+
+A. SENTENCES (each sentence becomes one Takahashi slide)
+1. Each sentence has 12 words or fewer and 90 characters or fewer, spaces included. Math counts as one word.
+2. Each sentence holds one idea. If a sentence needs "and", "but", "which", or a comma to join two ideas, write two sentences.
+3. End each sentence with a period, a question mark, or an exclamation mark. Do not use semicolons.
+4. Write complete sentences. Do not cut a sentence over two lines, two bullets, or two slides.
+5. Use the active voice and common words. Put the main word near the start.
+6. A paragraph has three sentences or fewer. A bullet is one short sentence.
+7. A slide title has six words or fewer.
+Before you answer, count the words in each sentence. Split every sentence that is too long.
+
+B. STRUCTURE
+1. Start with front matter:
+   ---
+   title: The title
+   subtitle: An optional subtitle
+   author: The author
+   ---
+2. Write "# Section" for a section and "## Slide title" for each slide. Put one idea on each slide.
+3. Write ordinary Markdown: paragraphs, lists, **bold**, *italic*, \`code\`, [links](https://example.com), and tables.
+4. Put ". . ." on its own line to show the next part on the next click. Use it to build an argument step by step.
+5. Put text for the article only between <!-- article --> and <!-- /article --> on separate lines. Use <!-- slides --> and <!-- /slides --> for text on slides only. Longer explanations go in the article.
+
+C. INTERACTIVE CONTENT (use it wherever the content has numbers, change, or a derivation)
+1. A relation between quantities: add a plot with a slider, so the reader can change a value and see the effect.
+   ::: plot
+   x: 0, 6.28
+   y: -2, 2
+   xlabel: time t (s)
+   ylabel: displacement y (m)
+   slider: A, 0.5, 2, 1, Amplitude A
+   slider: w, 0.5, 3, 1, Frequency w
+   y = A*sin(w*x)
+   :::
+   A plot can use numbers, x, slider names, pi, e, + - * / ^, and sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, exp, log, sqrt, abs, floor, ceil, min, and max. Do not use other functions.
+2. A comparison of numbers: add a bar chart. The first column holds the labels. Each other column holds one series of numbers. Give the unit in the header.
+   ::: chart bar
+   | Material | Speed of sound (m/s) |
+   | --- | ---: |
+   | Air | 343 |
+   | Water | 1480 |
+   :::
+3. A derivation: show the equations one step at a time.
+   ::: morph
+   $$a = b + c$$
+   $$a - c = b$$
+   :::
+4. A main result: give it its own slide, with one display equation or one sentence.
+5. Use only real data. If you do not know a value, write [value] and say so in a note.
+
+D. MATH, IMAGES, AND SPOKEN TEXT
+1. Write math in LaTeX: $x^2$ in a sentence, and $$ ... $$ on separate lines for display math. Use one equation in each $$ block. Do not use \\begin{...} environments.
+2. Write images as ![Description of the image](images/file.png "Optional caption"). Always write a description that tells what the image shows and why it matters.
+3. After each equation, plot, chart, or image, add an explanation in words. Narration reads it aloud, and screen readers use it.
+   ::: explain
+   The curve keeps its shape and gets smaller as time passes.
+   :::
+4. Put private speaker notes in "::: notes" ... ":::". Put notes for the audience and the handout in "::: public-notes" ... ":::".
+5. Put spoken text for a whole slide in "::: narration" ... ":::". Write math in words in spoken text, for example "x squared".
+6. Do not use color alone to give meaning. Do not add HTML or scripts.
+
+Return only the Markdown, in one code block.
+
+My brief:
+[Write your brief here.]
+
+My current draft:
+
+A talk about waves
+"
+`;
+
+exports[`tour project is the same 1`] = `
+{
+  "assets": [
+    "images/peafowl.png",
+  ],
+  "markdown": 
+"---
+title: Your words, in every form
+subtitle: A short tour of Marklove
+author: Marklove
+---
+
+Write once. Show it everywhere.
+
+::: narration
+Welcome to Marklove. This short tour shows what one file can do.
+:::
+
+# Write once
+
+## One file, every form
+
+This file is plain Markdown.
+
+. . .
+
+It becomes slides, an article, and a handout.
+
+. . .
+
+It also becomes a poster, a web page, and a video.
+
+::: notes
+Only you see this note. It shows in Speaker Ready.
+:::
+
+## A peafowl and a quill
+
+![A blue peafowl. Its head is a quill tip. Its feather is a heart.](images/peafowl.png "The Marklove mark.")
+
+::: explain
+The Marklove mark is a peafowl. Its head is the tip of a quill. Its feather is a heart.
+:::
+
+# Show the idea
+
+## Math that looks like math
+
+::: morph
+$$(a + b)^2$$
+$$(a + b)(a + b)$$
+$$a^2 + 2ab + b^2$$
+:::
+
+::: explain
+Square a plus b, and you get three terms.
+:::
+
+## Change it, see it
+
+::: plot
+x: 0, 6.3
+y: -2, 2
+xlabel: time t
+ylabel: height
+slider: A, 0.2, 2, 1, Size A
+slider: k, 0.5, 4, 1, Speed k
+y = A * sin(k * x)
+:::
+
+::: explain
+This is a wave. The two sliders change its size and its speed.
+:::
+
+## Numbers become charts
+
+::: chart bar
+| Material | Speed of sound (m/s) |
+| --- | ---: |
+| Air | 343 |
+| Water | 1480 |
+| Steel | 5960 |
+:::
+
+::: explain
+Sound moves faster in water than in air. It is fastest in steel.
+:::
+
+# Share it
+
+## Every version is kept
+
+Marklove saves a version each time you save.
+
+Each version tells what changed.
+
+Marklove reads [CommonMark](https://commonmark.org) Markdown.
+
+## Try it now
+
+1. Select **Preview** to present.
+2. Change a slider on the wave.
+3. Select **Export** and choose a form.
+"
+,
+  "name": "Marklove Tour",
+}
+`;
+
+exports[`equation at the cursor, spoken math and the check 1`] = `
+{
+  "display": false,
+  "end": 108,
+  "latex": "v = f\\lambda",
+  "start": 94,
+}
+`;
+
+exports[`equation at the cursor, spoken math and the check 2`] = `"a over b squared"`;
+
+exports[`equation at the cursor, spoken math and the check 3`] = `""`;
+
+exports[`equation at the cursor, spoken math and the check 4`] = `""`;
+
+exports[`theme resolve for each theme 1`] = `
+{
+  "darkOnly": false,
+  "id": "selenized",
+  "name": "Selenized",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 2`] = `
+{
+  "darkOnly": false,
+  "id": "catppuccin",
+  "name": "Catppuccin",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 3`] = `
+{
+  "darkOnly": false,
+  "id": "catppuccin-frappe",
+  "name": "Catppuccin Frappé",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 4`] = `
+{
+  "darkOnly": false,
+  "id": "catppuccin-macchiato",
+  "name": "Catppuccin Macchiato",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 5`] = `
+{
+  "darkOnly": false,
+  "id": "everforest",
+  "name": "Everforest",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 6`] = `
+{
+  "darkOnly": false,
+  "id": "gruvbox",
+  "name": "Gruvbox",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 7`] = `
+{
+  "darkOnly": false,
+  "id": "solarized",
+  "name": "Solarized",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 8`] = `
+{
+  "darkOnly": false,
+  "id": "github",
+  "name": "GitHub",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 9`] = `
+{
+  "darkOnly": false,
+  "id": "tokyo-night",
+  "name": "Tokyo Night",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 10`] = `
+{
+  "darkOnly": false,
+  "id": "tokyo-night-storm",
+  "name": "Tokyo Night Storm",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 11`] = `
+{
+  "darkOnly": false,
+  "id": "rose-pine",
+  "name": "Rosé Pine",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 12`] = `
+{
+  "darkOnly": false,
+  "id": "rose-pine-moon",
+  "name": "Rosé Pine Moon",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 13`] = `
+{
+  "darkOnly": false,
+  "id": "ayu",
+  "name": "Ayu",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 14`] = `
+{
+  "darkOnly": false,
+  "id": "ayu-mirage",
+  "name": "Ayu Mirage",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 15`] = `
+{
+  "darkOnly": false,
+  "id": "one",
+  "name": "One",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 16`] = `
+{
+  "darkOnly": false,
+  "id": "dracula",
+  "name": "Dracula",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 17`] = `
+{
+  "darkOnly": true,
+  "id": "monokai",
+  "name": "Monokai",
+  "prefersDark": true,
+}
+`;
+
+exports[`theme resolve for each theme 18`] = `
+{
+  "darkOnly": false,
+  "id": "night-owl",
+  "name": "Night Owl",
+  "prefersDark": null,
+}
+`;
+
+exports[`theme resolve for each theme 19`] = `
+{
+  "darkOnly": false,
+  "id": "nord",
+  "name": "Nord",
+  "prefersDark": true,
+}
+`;
+
+exports[`theme resolve for each theme 20`] = `
+{
+  "darkOnly": true,
+  "id": "matrix",
+  "name": "Matrix",
+  "prefersDark": true,
+}
+`;
+
+exports[`commit message from two versions 1`] = `"Edit the title slide"`;
+
+exports[`source checks give stable issues 1`] = `
+[
+  {
+    "code": "missingTitle",
+    "detail": 
+"Exports use the title for the file, the title slide, and the article. Example:
+---
+title: My lesson
+---"
+,
+    "end": 0,
+    "formats": [
+      "slidesPDF",
+      "slidesPNG",
+      "slidesSVG",
+      "articlePDF",
+      "articleHTML",
+      "epub",
+      "handoutPDF",
+      "posterPDF",
+      "interactiveHTML",
+      "articleMarkdown",
+      "revisedMarkdown",
+      "video",
+      "narratedVideo",
+      "manimVideo",
+      "podcast",
+      "narrationScript",
+      "transcript",
+      "subtitles",
+      "presenterZIP",
+      "listenerZIP",
+      "projectZIP",
+      "promptText",
+    ],
+    "message": "Add a title to the front matter.",
+    "severity": "information",
+    "start": 0,
+  },
+  {
+    "code": "missingImage",
+    "detail": "Marklove looks for "missing.png" in the project folder. Exports show the description in a frame.",
+    "end": 25,
+    "formats": [
+      "slidesPDF",
+      "articlePDF",
+      "handoutPDF",
+      "interactiveHTML",
+      "video",
+      "narratedVideo",
+      "manimVideo",
+      "presenterZIP",
+      "listenerZIP",
+    ],
+    "message": "Cannot find the image. Check the file path.",
+    "severity": "warning",
+    "start": 9,
+  },
+  {
+    "code": "missingDescription",
+    "detail": "Write the description between the brackets: ![Description](missing.png). If the image is only decoration, put <!-- decorative --> on the line before it.",
+    "end": 25,
+    "formats": [
+      "slidesPDF",
+      "articlePDF",
+      "handoutPDF",
+      "interactiveHTML",
+      "video",
+      "narratedVideo",
+      "manimVideo",
+    ],
+    "message": "Add an image description.",
+    "severity": "warning",
+    "start": 9,
+  },
+  {
+    "code": "needsExplanation",
+    "detail": "Narration does not describe images. Add a ::: explain block after it with the spoken words, or a ::: narration block for the whole slide.",
+    "end": 25,
+    "formats": [
+      "narratedVideo",
+      "manimVideo",
+      "podcast",
+      "narrationScript",
+      "transcript",
+      "subtitles",
+    ],
+    "message": "Add a spoken explanation for this image.",
+    "severity": "warning",
+    "start": 9,
+  },
+  {
+    "code": "takahashiOverlong",
+    "detail": "It has 22 words. The limit is 12 words and 90 characters. Marklove continues the sentence on more slides and keeps every word. To fix it, make the sentence shorter.",
+    "end": 124,
+    "formats": [
+      "slidesPDF",
+      "handoutPDF",
+      "interactiveHTML",
+      "revisedMarkdown",
+      "video",
+      "narratedVideo",
+    ],
+    "message": "This sentence is too long for one Takahashi slide.",
+    "severity": "warning",
+    "start": 27,
+    "style": "takahashi",
+  },
+]
+`;

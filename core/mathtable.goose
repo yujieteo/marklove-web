@@ -1,6 +1,3 @@
-// Generated from the Marklove app's MathSymbolTable.swift, which lists the LaTeX names
-// that SwiftMath (commit 1d2c90827e9c) renders. Do not edit by hand.
-// Each table is sorted by name, bytewise, for a binary search.
 
 struct MSym { name: const u8[:], kind: i64, text: const u8[:] }
 struct MStr { name: const u8[:], text: const u8[:] }

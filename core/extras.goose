@@ -1,33 +1,7 @@
-// Extras: equation lookup, math speech, the tour project, AI prompt text,
-// and the listener package text. Ports of MathLocator, MathSpeech, Tour,
-// DemoProject, PromptText and parts of ProjectPackage.
-//
-// Public functions:
-//   math_at(out, text: u8[:], offset: i64)
-//       The equation at a UTF-16 offset of `text`, as JSON
-//       {"latex":"…","display":true|false,"start":n,"end":n} (UTF-16 offsets,
-//       the range includes the dollar signs), or `null`.
-//   math_speech(out, latex: u8[:])
-//       The words for VoiceOver, as MathSpeech.spoken. The equation preview
-//       in the app also removes commas and spaces at both ends.
-//   tour_project(out)
-//       The tour (demo) project as JSON {"name":"…","markdown":"…",
-//       "assets":{"images/peafowl.png":"demo-peafowl.png"}}: each asset path in
-//       the project maps to the bundled file that the page must supply.
-//   revision_prompt(out)
-//   listener_markdown(out)
-//   public_assets(out)    JSON array of paths. The listener ZIP uses it.
-//   private_assets(out)   JSON array of paths that only private notes use.
-//                         The presenter ZIP uses public + private.
-//       These use the parsed document (call `parse_source` first).
-//   authoring_prompt(out, selected_draft: u8[:])
-//       An empty draft (after a trim) adds no draft section.
 
 import render;
 
-// --- small helpers -------------------------------------------------------
 
-// One code point of UTF-8 text at i: the value and the byte length.
 fn ex_cp(s: u8[:], i: i64) -> i64, i64 {
     let c = s[i];
     let n = min(utf8_len(c), s.len - i);
@@ -37,8 +11,6 @@ fn ex_cp(s: u8[:], i: i64) -> i64, i64 {
     return v, n;
 }
 
-// The byte index of a UTF-16 offset. An offset inside a character gives the
-// next character.
 fn ex_u16_to_byte(s: u8[:], u: i64) -> i64 {
     var n = 0;
     var i = 0;
@@ -50,7 +22,6 @@ fn ex_u16_to_byte(s: u8[:], u: i64) -> i64 {
     return min(i, s.len);
 }
 
-// Words with one space between them, as `split(whereSeparator: isWhitespace)`.
 fn ex_compact(out: u8[>..]&, s: u8[:]) {
     var first = true;
     var i = 0;
@@ -63,7 +34,6 @@ fn ex_compact(out: u8[>..]&, s: u8[:]) {
     }
 }
 
-// --- MathLocator ---------------------------------------------------------
 
 fn ml_escaped(s: u8[:], i: i64) -> bool {
     var n = 0;
@@ -72,7 +42,6 @@ fn ml_escaped(s: u8[:], i: i64) -> bool {
     return n % 2 == 1;
 }
 
-// The end of the line that contains i, after its line break.
 fn ml_line_end(s: u8[:], i: i64) -> i64 {
     var j = i;
     while j < s.len && s[j] != '\n' { j++; }
@@ -96,7 +65,6 @@ fn math_at(out: u8[>..]&, text: u8[:], offset: i64) {
     let length = text.len;
     if length == 0 { out.append("null"); return; }
     let loc = ex_u16_to_byte(text, max(0, offset));
-    // Lines in code fences are not math.
     var fenced: Line[>..] = [];
     var tokens: i64[>..] = [];
     var in_fence = false;
@@ -120,7 +88,6 @@ fn math_at(out: u8[>..]&, text: u8[:], offset: i64) {
     if in_fence { fenced.push(Line { fence_start, length }); }
     for f in fenced { if loc >= f.s && loc < f.e { out.append("null"); return; } }
 
-    // Display math: pairs of "$$" in order.
     var k = 0;
     while k + 1 < tokens.len {
         let open = tokens[k];
@@ -134,7 +101,6 @@ fn math_at(out: u8[>..]&, text: u8[:], offset: i64) {
         k += 2;
     }
 
-    // Inline math: "$…$" on the line, outside code spans and display math.
     let at = min(loc, length - 1);
     let start = ml_line_start(text, at);
     let end = ml_line_end(text, at);
@@ -147,7 +113,6 @@ fn math_at(out: u8[>..]&, text: u8[:], offset: i64) {
         if in_code || c != '$' || ml_escaped(text, i) { i++; continue; }
         if i + 1 < end && text[i + 1] == '$' { i += 2; continue; }
         if opens >= 0 {
-            // A closing "$" follows a character that is not a space.
             let before = text[i - 1];
             if before != ' ' && before != '\t' && i > opens + 1 {
                 if loc >= opens && loc <= i + 1 {
@@ -157,7 +122,6 @@ fn math_at(out: u8[>..]&, text: u8[:], offset: i64) {
                 opens = -1;
             }
         } else if i + 1 < end {
-            // An opening "$" comes before a character that is not a space.
             let after = text[i + 1];
             if after != ' ' && after != '\t' && after != '\n' { opens = i; }
         }
@@ -166,11 +130,6 @@ fn math_at(out: u8[>..]&, text: u8[:], offset: i64) {
     out.append("null");
 }
 
-// --- MathSpeech ----------------------------------------------------------
-//
-// The reader works on code points in MS_CP. Each function appends words to
-// MS_W (spans of MS_T). A function that puts words before its arguments
-// writes the result after them, then moves it down (ms_finish).
 
 var MS_CP: i64[>..] = [];
 var MS_I = 0;
@@ -196,7 +155,6 @@ fn ms_copy_range(a: i64, b: i64) { for j in a..b { ms_copy(j); } }
 
 fn ms_is(j: i64, t: u8[:]) -> bool { MS_T[MS_W[j].s..MS_W[j].e] == t }
 
-// Moves the words from `mid` to the end down to `base`.
 fn ms_finish(base: i64, mid: i64) {
     let n = MS_W.len - mid;
     for k in n { let w = MS_W[mid + k]; MS_W[base + k] = w; }
@@ -236,7 +194,6 @@ recursive fn ms_argument() {
     ms_char_word(c);
 }
 
-// The raw text of a braced argument, for \text{...}.
 fn ms_raw_argument() {
     let o = MS_T.len;
     ms_skip_spaces();
@@ -286,7 +243,6 @@ recursive fn ms_item() {
     ms_char_word(c);
 }
 
-// The words base.. are an exponent.
 fn ms_power(base: i64) {
     let n = MS_W.len - base;
     if n == 1 && ms_is(base, "2") { MS_W.resize(base); ms_word("squared"); return; }
@@ -318,7 +274,6 @@ fn ms_char_word(c: i64) {
     else if c == '&' || c == '~' { ms_word(""); }
     else if c == 0xD7 || c == 0xB7 { ms_word("times"); }
     else {
-        // A character and its combining marks.
         let o = MS_T.len;
         push_utf8(MS_T, c as u32);
         while MS_I < MS_CP.len && MS_CP[MS_I] >= 0x300 && MS_CP[MS_I] <= 0x36F {
@@ -329,7 +284,6 @@ fn ms_char_word(c: i64) {
     }
 }
 
-// Limits after \sum, \int, \prod, or \lim, with the word that follows them.
 recursive fn ms_limits(name: u8[:]) {
     let base = MS_W.len;
     var lo_a = 0;
@@ -372,7 +326,6 @@ fn ms_in(n: u8[:], set: const u8[:][:]) -> bool {
     return false;
 }
 
-// The word for a symbol command, or "" when it is not one.
 fn ms_symbol(n: u8[:]) -> const u8[:] {
     let t = [
         "partial", "partial", "nabla", "nabla", "infty", "infinity", "pm", "plus or minus", "mp", "minus or plus",
@@ -402,7 +355,6 @@ fn ms_symbol(n: u8[:]) -> const u8[:] {
 }
 
 recursive fn ms_command_words() {
-    // The command name, after the backslash.
     MS_I++;
     let o = MS_T.len;
     let c0 = ms_peek();
@@ -411,7 +363,6 @@ recursive fn ms_command_words() {
         else { while ms_is_letter(ms_peek()) { MS_T.push(ms_peek() as u8); MS_I++; } }
     }
     let name_l = Line { o, MS_T.len };
-    // A copy of the name, so that the arena can grow.
     var nm: u8[..64] = [];
     let long = name_l.e - name_l.s > 64;
     if !long { nm.append(MS_T[name_l.s..name_l.e]); }
@@ -497,7 +448,6 @@ fn math_speech(out: u8[>..]&, latex: u8[:]) {
         i += n;
     }
     ms_sequence(-1);
-    // Join with spaces, replace " ," with ",", then remove extra spaces.
     var joined: u8[>..] = [];
     for w, k in MS_W {
         if k > 0 { joined.push(' '); }
@@ -519,16 +469,12 @@ fn math_speech(out: u8[>..]&, latex: u8[:]) {
     }
 }
 
-// --- ProjectPackage ------------------------------------------------------
 
-// ProjectPaths.normalize. Returns false for a path that is not a local
-// relative path.
 fn ex_normalize(out: u8[>..]&, path: u8[:]) -> bool {
     var p = trim_sp(path);
     var q = 0;
     while q < p.len && p[q] != '?' && p[q] != '#' { q++; }
     p = p[..q];
-    // Percent decoding. Text with a bad escape stays as it is.
     var dec: u8[>..] = [];
     var bad = false;
     var i = 0;
@@ -551,7 +497,6 @@ fn ex_normalize(out: u8[>..]&, path: u8[:]) -> bool {
     if t.len == 0 || t[0] == '/' || t[0] == '\\' || t[0] == '~' || index_of(lowt, "://") >= 0 ||
        has_prefix(lowt, "data:") || has_prefix(lowt, "file:") { return false; }
     for k in t.len { if t[k] == '\\' { t[k] = '/'; } }
-    // Components, with "." removed and ".." applied.
     var starts: i64[>..] = [];
     let base = out.len;
     var a = 0;
@@ -576,8 +521,6 @@ fn ex_normalize(out: u8[>..]&, path: u8[:]) -> bool {
     return true;
 }
 
-// Appends the normalized image paths of the anchors that are not in `skip`
-// ("path\n" lines) or in `seen`, to `seen` and to the list.
 fn ex_collect_images(seen: u8[>..]&, list: u8[>..]&) {
     for a in ANC {
         if a.kind != 2 { continue; }
@@ -611,13 +554,8 @@ fn ex_json_lines(out: u8[>..]&, list: u8[:]) {
     out.push(']');
 }
 
-// The kind of division that a frame keeps apart from its body: notes,
-// narration, public notes, and explanations.
 fn ex_is_extracted(k: i64) -> bool { k == D_NOTES || k == D_NARRATION || k == D_PUBLIC || k == D_EXPLAIN }
 
-// The extracted divisions of one kind in events lo..hi. They are found in
-// the body and in other divisions, at any depth, as the app's extractRaw.
-// The result is pairs of event indexes in `found`.
 fn ex_find_divs(found: i64[>..]&, lo: i64, hi: i64, kind: i64) {
     var i = lo;
     while i < hi {
@@ -646,7 +584,6 @@ fn private_assets(out: u8[>..]&) {
     var seen: u8[>..] = [];
     var pub: u8[>..] = [];
     ex_collect_images(seen, pub);
-    // The raw text of each note, then a parse of each one.
     var notes: i64[>..] = [];
     ex_all_notes(notes);
     var raws: u8[>..] = [];
@@ -680,7 +617,6 @@ fn listener_markdown(out: u8[>..]&) {
     var notes: i64[>..] = [];
     ex_all_notes(notes);
     for d in notes { cuts.push(ExCut { EV[d].s0, EV[d].s1 }); }
-    // Author comments: any HTML comment line that is not a Marklove marker.
     var in_fence = false;
     var fch: u8 = '`';
     var flen = 0;
@@ -712,7 +648,6 @@ fn listener_markdown(out: u8[>..]&) {
         }
         if index_of(t, "-->") >= 0 { cuts.push(ExCut { l.s, l.e }); } else { comment_start = l.s; }
     }
-    // Sort, extend each cut over its line break, and merge.
     for i in 1..cuts.len {
         var j = i;
         while j > 0 && (cuts[j - 1].s > cuts[j].s || (cuts[j - 1].s == cuts[j].s && cuts[j - 1].e > cuts[j].e)) {
@@ -741,14 +676,12 @@ fn listener_markdown(out: u8[>..]&) {
         cursor = max(cursor, r.e);
     }
     if cursor < SRC.len { text.append(SRC[cursor..]); }
-    // "\n\n\n\n" becomes "\n\n\n" until no run of four is left.
     var t2: u8[>..] = [];
     var run = 0;
     for c in text {
         if c == '\n' { run++; if run > 3 { continue; } } else { run = 0; }
         t2.push(c);
     }
-    // Mark the package as a listener presentation.
     let nl = index_of_byte(t2, '\n');
     if FRONT_S0 >= 0 && nl >= 0 {
         out.append(t2[..nl + 1]);
@@ -760,7 +693,6 @@ fn listener_markdown(out: u8[>..]&) {
     }
 }
 
-// --- PromptText ----------------------------------------------------------
 
 fn authoring_prompt(out: u8[>..]&, selected_draft: u8[:]) {
     out.append("Write a presentation as Marklove Markdown. ");
@@ -786,7 +718,6 @@ fn revision_prompt(out: u8[>..]&) {
     out.append("````\n");
 }
 
-// --- Tour ----------------------------------------------------------------
 
 fn tour_project(out: u8[>..]&) {
     out.append("{\"name\":\"Marklove Tour\",\"markdown\":");
@@ -794,7 +725,6 @@ fn tour_project(out: u8[>..]&) {
     out.append(",\"assets\":{\"images/peafowl.png\":\"demo-peafowl.png\"}}");
 }
 
-// --- long texts ----------------------------------------------------------
 fn tour_markdown() -> const u8[:] {
     return """
     ---
@@ -898,7 +828,6 @@ fn tour_markdown() -> const u8[:] {
     """;
 }
 
-// PromptText.rules for the standard Takahashi profile (12 words, 90 characters).
 fn pt_rules(out: u8[>..]&) {
     out.append("""
         Marklove makes slides, Takahashi slides (one large sentence on each slide), an article, a handout, an interactive web page, and videos from this one file. Follow every rule below.

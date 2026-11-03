@@ -1,12 +1,3 @@
-// The narration script, as the app's NarrationComposer: the exact text that
-// narration speaks. Transcripts and subtitles use the same text.
-//
-// - A `::: narration` block replaces the spoken text for its frame.
-// - Otherwise shared prose is spoken: the frame title, paragraphs, list
-//   items, quotes, and `::: explain` blocks, in source order.
-// - Slide-only and article-only passages are not spoken.
-// - Equations, images, tables, plots, and charts need an authored
-//   explanation. Paragraphs with inline math are not read aloud.
 
 import sentence;
 
@@ -17,7 +8,6 @@ let NO_PROSE = 4;
 let NO_EXPLANATION = 5;
 let NO_OVERRIDE = 6;
 
-// Visual content that needs an explanation.
 let NV_EQUATION = 1;
 let NV_IMAGE = 2;
 let NV_VIDEO = 3;
@@ -31,10 +21,8 @@ struct NSeg { frame: i64, text: Span, origin: i64, s0: i64, s1: i64, sent_lo: i6
 struct NMiss { kind: i64, frame: i64, s0: i64, s1: i64 }
 var NSEG: NSeg[>..] = [];
 var NMISS: NMiss[>..] = [];
-// The sentences of all segments, as spans in S.
 var NSENT: Span[>..] = [];
 
-// The items of one frame, before sorting.
 struct NItem { s0: i64, s1: i64, text: Span, has_text: bool, origin: i64, visual: i64 }
 var NITEMS: NItem[>..] = [];
 
@@ -43,7 +31,6 @@ fn narr_has_frame(fi: i64) -> bool {
     return false;
 }
 
-// The plain spoken text of authored Markdown, into S.
 fn spoken(t: u8[:]) -> Span {
     var copy: u8[>..] = [];
     copy.append(t);
@@ -55,7 +42,6 @@ fn spoken(t: u8[:]) -> Span {
     return Span { o, S.len - o };
 }
 
-// A title with a full stop, so that it reads as a sentence.
 fn sentence_end(out: u8[>..]&, t0: u8[:]) {
     let t = trim_all(t0);
     out.append(t);
@@ -134,8 +120,6 @@ recursive fn collect(lo: i64, hi: i64) {
     }
 }
 
-// Explanations in a frame at any depth of divisions, in any scope, as the
-// app extracts them from the body.
 recursive fn collect_explain(lo: i64, hi: i64) {
     var i = lo;
     while i < hi {
@@ -212,9 +196,7 @@ fn narration_script() {
     }
 }
 
-// --- text outputs ----------------------------------------------------------
 
-// The script as readable text, one paragraph per segment, grouped by frame.
 fn narration_text(out: u8[>..]&) {
     var last = -1;
     var n = 0;
@@ -258,8 +240,6 @@ fn transcript(out: u8[>..]&) {
     out.push('\n');
 }
 
-// Subtitle cues, as VideoTimeline: each frame's sentences are shared out
-// across its reveal steps (`frame_steps` gives the steps of each frame).
 struct Cue { start: f64, end: f64, text: Span }
 var CUES: Cue[>..] = [];
 

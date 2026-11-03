@@ -17,14 +17,22 @@ The `web/` folder is a static site. It needs no server code and no network after
 To try it on your computer:
 
 ```sh
-python3 -m http.server --directory web 8000
+bun run serve
 ```
 
 Then open <http://localhost:8000/>. This server has no `/shared/kowalski.css`. For local work, serve the `public/` folder of the site repository with this app in it, or accept chrome with no styles. Projects stay in the storage of your browser (IndexedDB). To move a project to another browser, export the project ZIP and import it there.
 
 ## Build
 
-The repository contains the built files `web/marklove.mjs` and `web/marklove.wasm`. Build them again after you change a file in `core/`.
+The app is TypeScript in `src/`. [Bun](https://bun.sh) installs the packages, bundles the code and runs the tests. Run `bun install` once.
+
+The repository contains the built files `web/app.js`, `web/runtime.js` and `web/article.js`. Build them again after you change a file in `src/`:
+
+```sh
+bun run build:web
+```
+
+The repository also contains the built files `web/marklove.mjs` and `web/marklove.wasm`. Build them again after you change a file in `core/`.
 
 You need:
 
@@ -34,7 +42,7 @@ You need:
 Run:
 
 ```sh
-GOOSE=/path/to/goose EMCC=/path/to/emcc ./build.sh
+GOOSE=/path/to/goose EMCC=/path/to/emcc sh build.sh
 ```
 
 The script does 2 steps:
@@ -45,10 +53,20 @@ The script does 2 steps:
 ## Test
 
 ```sh
-node --import ./tests/app_stubs/register.mjs --test tests/*.test.mjs
+bun run test
 ```
 
-The tests use the built core through `web/core.js`. The project ZIP test also runs `git fsck` on the exported history when Git is installed.
+The tests use the built core through `src/core.ts`. The project ZIP test also runs `git fsck` on the exported history when Git is installed.
+
+Before a review, run all local checks:
+
+```sh
+bun run check
+```
+
+The checks are: the type check (`tsc --noEmit`), the lint rules (no comments, no `any`, no type assertions), the dead-code check (knip), the state model hashes, the web bundles, the tests, the page size budget, a build of the generated C with the address and undefined-behavior sanitizers, and the process replay.
+
+The process replay (`bun run replay`) runs the tests with a capture switch, then gives each captured call to the base commit and to your working tree, in separate copies. It also compiles `core/marklove.goose` in both. It fails on each difference. When a change must change an output, run `bun run replay -- --accept` after you read the printed diff.
 
 ## Files
 
@@ -70,12 +88,14 @@ The tests use the built core through `web/core.js`. The project ZIP test also ru
 | `core/trace.goose` | Raster pixels to SVG shapes, for the SVG slide export. |
 | `core/video.goose` | The video timeline, the podcast timing and the MP4 file. |
 | `core/io.h` | The input buffers, the memory for the Goose data stacks, and the text and math measurement in the browser. |
-| `web/core.js` | The JavaScript interface to the core. |
-| `web/index.html`, `web/app.js`, `web/app.css` | The app page, its start and its styles. |
-| `web/store.js`, `web/ui.js`, `web/editor.js`, `web/find.js`, `web/preview.js`, `web/export.js`, `web/panels.js` | The app parts: storage and settings, controls, the editor, Find and Vim, the preview and presentation, export, and the other panels. |
-| `web/pages.js`, `web/video.js`, `web/voice.js` | The PDF pages, the PNG and SVG slides, the video and audio encoders, and the Kokoro voice. |
+| `src/core.ts` | The TypeScript interface to the core. |
+| `web/index.html`, `src/app.ts`, `web/app.css` | The app page, its start and its styles. `web/app.js` is the bundle of `src/app.ts`. |
+| `src/store.ts`, `src/ui.ts`, `src/editor.ts`, `src/find.ts`, `src/preview.ts`, `src/export.ts`, `src/panels.ts` | The app parts: storage and settings, controls, the editor, Find and Vim, the preview and presentation, export, and the other panels. |
+| `src/pages.ts`, `src/video.ts`, `src/voice.ts` | The PDF pages, the PNG and SVG slides, the video and audio encoders, and the Kokoro voice. |
 | `web/demo-peafowl.png` | The photo of the tour project. |
-| `web/style.css`, `web/runtime.js`, `web/article.css`, `web/article.js` | The parts of the exported pages, based on Marklove. `web/style.css` and `web/article.css` add the shared interaction rules: press scale, a hover fade only on a fine pointer, and no tap highlight. Thus they differ from the native app. |
+| `web/style.css`, `src/runtime.ts`, `web/article.css`, `src/article.ts` | The parts of the exported pages, based on Marklove. `web/style.css` and `web/article.css` add the shared interaction rules: press scale, a hover fade only on a fine pointer, and no tap highlight. Thus they differ from the native app. |
+| `scripts/` | The local checks, the bundler and the process replay. |
+| `docs/state/` | The state machines of the voice and the project save, with the proof tests of their bugs. |
 | `web/fonts/` | Courier Prime, Courier Prime Sans, Libre Baskerville and KpMath, with their licenses (SIL Open Font License). |
 
 The Kokoro voice uses the web version of [kokoro-js](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) 1.2.1 from jsDelivr. It runs the Kokoro-82M ONNX model (`onnx-community/Kokoro-82M-v1.0-ONNX`, q8) from Hugging Face. Both are under the Apache License 2.0.

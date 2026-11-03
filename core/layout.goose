@@ -1,15 +1,3 @@
-// Fixed pages, as the app's layout model (MarkloveCore/Layout): slides on a
-// 960 × 540 canvas, the article on A4 or Letter pages, the handout, and the
-// conference poster. Slide PDF, slide images, video frames, the article PDF,
-// the handout and the poster all use these pages.
-//
-// The browser is the TextMeasurer: io.h asks it for the advance of a piece
-// of text in a CSS font and for the size of an equation. The line breaks
-// are made here, and the page renderer (pagesvg.goose) uses the same breaks.
-// Coordinates are points, with the origin at the top left.
-//
-// The app builds flow items with closures. Here an item is data: a kind and
-// its values, and `make` places the boxes for each kind.
 
 import render;
 import theme;
@@ -18,7 +6,6 @@ import extras;
 extern fn ml_measure(text: const u8[:], font: const u8[:]) -> f64;
 extern fn ml_math_metric(latex: const u8[:], display: i32, which: i32) -> f64;
 
-// --- styled text -------------------------------------------------------------
 
 let FA_BODY = 0;
 let FA_HEAD = 1;
@@ -29,7 +16,6 @@ let AL_CENTER = 1;
 let AL_RIGHT = 2;
 let AL_JUST = 3;
 
-// Color roles. CR_SERIES + k is the series color k; CR_HL + a highlight role.
 let CR_NONE = -1;
 let CR_TEXT = 0;
 let CR_STRONG = 1;
@@ -41,22 +27,17 @@ let CR_BORDER = 6;
 let CR_SERIES = 10;
 let CR_HL = 40;
 
-// Run styles.
 let RF_BOLD = 1;
 let RF_ITALIC = 2;
 let RF_CODE = 4;
 let RF_STRIKE = 8;
-// Inline LaTeX: the run text is the LaTeX, and the run is one unit.
 let RF_MATH = 16;
 
-// The text of every run, link, equation and path of the current layout.
 var TB: u8[>..] = [];
 
 struct Run { a: i64, b: i64, fl: i64, color: i64, link: Line }
 var RUNS: Run[>..] = [];
 
-// A paragraph of styled text: runs r0..r1, and the text window lo..hi in TB.
-// A slice of a paragraph is the same runs with a smaller window.
 struct Txt {
     r0: i64, r1: i64, lo: i64, hi: i64,
     fam: i64, size: f64, bold: bool, italic: bool,
@@ -80,7 +61,6 @@ fn add_run(t: u8[:], fl: i64, color: i64, link: Line) {
 
 fn lk0() -> Line { Line { 0, 0 } }
 
-// Inline math that the browser renders, or the LaTeX as code.
 fn math_run(latex: u8[:], fl: i64, color: i64, link: Line) {
     if math_ok(latex, false) { add_run(latex, fl | RF_MATH, color, link); return; }
     var t: u8[>..] = [];
@@ -90,7 +70,6 @@ fn math_run(latex: u8[:], fl: i64, color: i64, link: Line) {
     add_run(t, fl | RF_CODE, color, link);
 }
 
-// RunBuilder.runs: the inline events lo..hi as runs.
 fn inline_runs(lo: i64, hi: i64) {
     var fl: i64[>..] = [0];
     var col: i64[>..] = [CR_NONE];
@@ -130,7 +109,6 @@ fn inline_runs(lo: i64, hi: i64) {
     }
 }
 
-// Inline Markdown that is not in the source (a box title, public notes).
 fn markdown_runs(t: u8[:]) {
     var copy: u8[>..] = [];
     copy.append(t);
@@ -140,7 +118,6 @@ fn markdown_runs(t: u8[:]) {
     EV.resize(mark);
 }
 
-// A paragraph of the runs from r0 to the last run.
 fn new_txt(r0: i64, fam: i64, size: f64) -> i64 {
     let r1 = RUNS.len;
     let lo = if r0 < r1 { RUNS[r0].a } else { TB.len };
@@ -155,7 +132,6 @@ fn plain_txt(t: u8[:], fam: i64, size: f64) -> i64 {
     return new_txt(r0, fam, size);
 }
 
-// FlowLayouter.body: inline events as a paragraph.
 fn body_txt(lo: i64, hi: i64, size: f64) -> i64 {
     let r0 = RUNS.len;
     inline_runs(lo, hi);
@@ -179,9 +155,7 @@ fn slice_txt(ti: i64, lo: i64, hi: i64) -> i64 {
     return TXTS.len - 1;
 }
 
-// --- typography and metrics -------------------------------------------------
 
-// Typography (Theme.swift): the fonts of each output.
 let TY_SLIDES = 0;
 let TY_ARTICLE = 1;
 let TY_HANDOUT = 2;
@@ -200,7 +174,6 @@ fn family_css(fam: i64) -> const u8[:] {
     return FONT_PALA;
 }
 
-// The font of a run (TextStyler.attributedString).
 fn run_fam(t: Txt, r: Run) -> i64 { if (r.fl & RF_CODE) != 0 { FA_CODE } else { t.fam } }
 fn run_size(t: Txt, r: Run) -> f64 { if (r.fl & RF_CODE) != 0 && t.fam != FA_CODE { t.size * 0.92 } else { t.size } }
 fn run_bold(t: Txt, r: Run) -> bool { t.bold || (r.fl & RF_BOLD) != 0 }
@@ -208,7 +181,6 @@ fn run_italic(t: Txt, r: Run) -> bool { t.italic != ((r.fl & RF_ITALIC) != 0) }
 
 var FONT: u8[>..] = [];
 
-// The CSS font at 100 px, for ml_measure.
 fn font_100(t: Txt, r: Run) {
     FONT.clear();
     if run_italic(t, r) { FONT.append("italic "); }
@@ -223,34 +195,26 @@ fn text_width(text: u8[:], t: Txt, r: Run) -> f64 {
     return ml_measure(text, FONT) * run_size(t, r) / 100.0;
 }
 
-// The distance from a line's bottom to its baseline: the font descent.
 fn descent(size: f64) -> f64 {
     if TYPO == TY_HANDOUT { return size * 0.25; }
     return size * 0.27;
 }
 
-// Equation metrics for a font size of 1 point: width, ascent, descent.
 fn math_metrics(latex: u8[:], display: bool) -> f64, f64, f64 {
     let d: i32 = if display { 1 } else { 0 };
     return ml_math_metric(latex, d, 0), ml_math_metric(latex, d, 1), ml_math_metric(latex, d, 2);
 }
 
-// MathSupport, then the browser: true when the equation renders.
 fn math_ok(latex: u8[:], display: bool) -> bool {
     if math_check(latex).len > 0 || unbalanced_brace(latex) { return false; }
     let w, a, d = math_metrics(latex, display);
     return w >= 0.0 && a >= 0.0 && d >= 0.0;
 }
 
-// --- line breaks -----------------------------------------------------------
 
-// A piece of a line: bytes a..b of run r. w is the advance without the
-// trailing spaces, ws with them. A line break can follow each piece.
 struct Piece { a: i64, b: i64, r: i64, w: f64, ws: f64, nl: bool }
 var PCS: Piece[>..] = [];
 
-// A line: pieces p0..p1, bytes a..b, the width without trailing spaces,
-// and true when it ends with a line break.
 struct LineI { p0: i64, p1: i64, a: i64, b: i64, w: f64, hard: bool }
 var LNS: LineI[>..] = [];
 
@@ -301,8 +265,6 @@ fn next_char(i: i64) -> i64 {
     return j;
 }
 
-// Splits piece k at the longest start that fits in `avail` (at least one
-// character), for a word that is wider than the line.
 fn split_piece(ti: i64, k: i64, avail: f64) {
     let t = TXTS[ti];
     let p = PCS[k];
@@ -334,7 +296,6 @@ fn push_line(p0: i64, p1: i64, a: i64, w: f64, hard: bool) {
     LNS.push(LineI { p0, p1, if p1 > p0 { PCS[p0].a } else { a }, b, w, hard });
 }
 
-// The lines of a paragraph at a width (CoreTextMeasurer.measure).
 fn break_lines(ti: i64, width: f64) {
     pieces(ti);
     LNS.clear();
@@ -382,7 +343,6 @@ fn break_lines(ti: i64, width: f64) {
 
 fn line_h(ti: i64) -> f64 { TXTS[ti].size * TXTS[ti].lh }
 
-// TextMeasure: the height and the widest line.
 fn measure(ti: i64, width: f64) -> f64, f64 {
     break_lines(ti, width);
     var w = 0.0;
@@ -395,7 +355,6 @@ fn measure_h(ti: i64, width: f64) -> f64 {
     return h;
 }
 
-// --- layout style ----------------------------------------------------------
 
 struct LStyle {
     body: f64, code: f64, caption: f64,
@@ -431,19 +390,14 @@ fn head_size(level: i64) -> f64 {
 }
 
 var ST = LStyle { 22.0, 16.0, 14.0, 30.0, 26.0, 22.0, 20.0, 19.0, 18.0, 1.3, 12.0, 26.0, 12.0, 1.2, 0.7, 0.0, false, 0.45 };
-// True for flowing pages (the article and the poster): figures have a fixed height.
 var FLOWING = false;
-// Static outputs (PDF, images, handout) show every equation step.
 var STACK_EQ = false;
 var PAGE_H = 0.0;
-// Article scope and no reveal steps.
 var LART = false;
 var LSTEP = 0;
 var LDEPTH = 0;
-// The article: the first paragraph after a heading has no indent.
 var AFTER_HEAD = false;
 
-// --- boxes and pages --------------------------------------------------------
 
 let BX_TEXT = 0;
 let BX_LABEL = 1;
@@ -459,11 +413,6 @@ let BX_PLOT = 10;
 let BX_CHART = 11;
 let BX_THUMB = 12;
 
-// LayoutBox. Text kinds: a = paragraph. Math: p = LaTeX, c = font size.
-// Media: p = path, a = media kind, q = description (empty when
-// decorative). Missing media: a = paragraph, q = description. Fill: c =
-// corner radius. Stroke and rule: c = line width. Plot and chart: a = the
-// division event, c = font size. Thumbnail: a = the slide page.
 struct Box {
     x: f64, y: f64, w: f64, h: f64,
     kind: i64, first: i64, last: i64,
@@ -487,20 +436,15 @@ fn shape_box(x: f64, y: f64, w: f64, h: f64, kind: i64, color: i64, c: f64, step
     BOXES[b].c = c;
 }
 
-// PageLayout: boxes b0..b1, the reveal steps, the slide (or -1) and the
-// frame of the slide.
 struct Page { w: f64, h: f64, b0: i64, b1: i64, steps: i64, slide: i64, frame: i64, title: Line }
 var PAGES: Page[>..] = [];
-// The pages of the output start here (the handout puts its slides first).
 var OUT0 = 0;
-// Layout warnings for the export notes, one on each line.
 var LWARN: u8[>..] = [];
 
 fn add_page(w: f64, h: f64, b0: i64, steps: i64, slide: i64, frame: i64, title: Line) {
     PAGES.push(Page { w, h, b0, BOXES.len, steps, slide, frame, title });
 }
 
-// --- flow items ------------------------------------------------------------
 
 let IT_TEXT = 0;
 let IT_CODE = 1;
@@ -515,18 +459,6 @@ let IT_BOX = 9;
 let IT_COLUMNS = 10;
 let IT_SPACER = 11;
 
-// FlowItem. x0 and w place the content in the item. Text and code: a =
-// paragraph (code: f = padding). Math: p = LaTeX, f = font size, g =
-// equation height, e = equation width; last = the last step or -1.
-// Equation steps: children c0..c1 in CH, b = 1 to stack them. Graphic: a =
-// division, b = 1 for a chart, f = font size. Media: p = path, q =
-// description, b = media kind. Missing: a = paragraph, q = description.
-// Table: a = table (TBLS), rows c0..c1, b = 1 with the header row. Box:
-// children c0..c1, f = padding, g = content height, e = gap, color =
-// accent. Columns: CH from c0 holds, for each column, its count and its
-// children; f = column width, g = column gap, e = stack gap, b = columns.
-// A list marker (paragraph `marker` at x `mx`) and quote bars (x positions
-// bar1 and bar2, or -1) are drawn with the first item.
 struct Item {
     kind: i64, h: f64, flex: bool, minh: f64, maxh: f64, keep: bool, split: bool,
     step: i64, last: i64, x0: f64, w: f64,
@@ -537,7 +469,6 @@ struct Item {
 }
 var ITEMS: Item[>..] = [];
 var CH: i64[>..] = [];
-// Items that a conversion makes, in order.
 var OUTL: i64[>..] = [];
 
 fn new_item(kind: i64, h: f64, step: i64, x0: f64, w: f64) -> i64 {
@@ -556,14 +487,11 @@ fn text_item(ti: i64, width: f64, step: i64, x0: f64, keep: bool) -> i64 {
     return it;
 }
 
-// Table data: column widths in TF from w0, cell paragraphs in TI from c0
-// (the header row first), row heights in TF from rh0.
 struct Tbl { cols: i64, rows: i64, w0: i64, c0: i64, rh0: i64, bpad: f64, tw: f64 }
 var TBLS: Tbl[>..] = [];
 var TF: f64[>..] = [];
 var TI: i64[>..] = [];
 
-// The arena sizes, to take back a layout attempt.
 struct Mark { items: i64, ch: i64, txts: i64, runs: i64, tb: i64, outl: i64, tbls: i64, tf: i64, ti: i64 }
 
 fn mark() -> Mark { Mark { ITEMS.len, CH.len, TXTS.len, RUNS.len, TB.len, OUTL.len, TBLS.len, TF.len, TI.len } }
@@ -580,7 +508,6 @@ fn rewind(m: Mark) {
     TI.resize(m.ti);
 }
 
-// --- making boxes ----------------------------------------------------------
 
 fn make_table(it: Item, x: f64, y: f64) {
     let t = TBLS[it.a];
@@ -611,7 +538,6 @@ recursive fn make_stack(c0: i64, c1: i64, x: f64, y: f64, gap: f64) {
     }
 }
 
-// FlowItem.make: the boxes of an item at a position, with its final height.
 recursive fn make(ii: i64, x: f64, y: f64, h: f64) {
     let it = ITEMS[ii];
     if it.bar2 >= 0.0 { shape_box(x + it.bar2, y, 3.0, h, BX_ACCENT, CR_BORDER, 0.0, it.step); }
@@ -659,7 +585,6 @@ recursive fn make(ii: i64, x: f64, y: f64, h: f64) {
         BOXES[b].c = it.f;
     }
     else if k == IT_MEDIA {
-        // Fit the whole image, keep its proportions, and center it.
         let aspect = it.f;
         let w = min(it.w, h / aspect);
         let mh = w * aspect;
@@ -690,9 +615,7 @@ recursive fn make(ii: i64, x: f64, y: f64, h: f64) {
     }
 }
 
-// --- splitting --------------------------------------------------------------
 
-// FlowItem.split: two items, the first of which fits in `avail`, or -1.
 fn split_item(ii: i64, avail: f64) -> i64, i64 {
     let it = ITEMS[ii];
     if !it.split { return -1, -1; }
@@ -710,7 +633,6 @@ fn split_item(ii: i64, avail: f64) -> i64, i64 {
             acc += lh;
             count++;
         }
-        // Keep at least two lines on each side when possible.
         if !code && count < n && n >= 4 {
             count = min(count, n - 2);
             if count < 2 { return -1, -1; }
@@ -753,7 +675,6 @@ fn table_part(tbl: i64, r0: i64, r1: i64, header: bool, like: Item) -> i64 {
     return it;
 }
 
-// --- elements to items (FlowLayouter.items) ---------------------------------
 
 fn code_item_txt(ti: i64, width: f64, x0: f64, bpad: f64, step: i64) -> i64 {
     break_lines(ti, width - 2.0 * bpad);
@@ -801,7 +722,6 @@ fn math_item(latex: Line, width: f64, x0: f64, step: i64, last: i64) -> i64 {
     let l = tb(latex);
     if math_ok(l, true) {
         var w, a, d = math_metrics(l, true);
-        // Shrink a wide equation to fit, down to the shrink limit.
         if w * size > width {
             size *= max(ST.shrink, width / (w * size));
         }
@@ -815,7 +735,6 @@ fn math_item(latex: Line, width: f64, x0: f64, step: i64, last: i64) -> i64 {
         ITEMS[it].last = last;
         return it;
     }
-    // Fallback: the LaTeX source as text.
     var t: u8[>..] = [];
     t.append("$$ ");
     t.append(l);
@@ -873,8 +792,6 @@ fn graphic_item(d: i64, chart: bool, width: f64, x0: f64, step: i64) -> i64 {
     return it;
 }
 
-// Media sizes from JavaScript: "path\twidth\theight" lines (argument 6).
-// A video's size is the size of its first frame.
 var MEDIA: u8[>..] = [];
 
 fn media_size(path: u8[:]) -> f64, f64, bool {
@@ -900,7 +817,6 @@ fn media_size(path: u8[:]) -> f64, f64, bool {
     return 0.0, 0.0, false;
 }
 
-// FlowLayouter.figureItems: the image (or a frame with the reason) and the caption.
 fn figure_items(i: i64, width: f64, x0: f64, step: i64) {
     let f = EV[i];
     let path = sp_text(f.b);
@@ -909,7 +825,6 @@ fn figure_items(i: i64, width: f64, x0: f64, step: i64) {
     let mw, mh, found = media_size(path);
     if !remote && f.n != M_AUDIO && found {
         let aspect = mh / mw;
-        // Articles keep small images small; slides fit the whole image to the space.
         let natural_w = if FLOWING { min(width, max(mw, width * 0.4)) } else { width };
         let natural = natural_w * aspect;
         var it = 0;
@@ -941,7 +856,6 @@ fn figure_items(i: i64, width: f64, x0: f64, step: i64) {
         ITEMS[it].f = size;
         OUTL.push(it);
     }
-    // Static outputs show the embedded caption beneath the image.
     if f.c.n > 0 {
         let ti = plain_txt(sp_text(f.c), FA_BODY, ST.caption);
         set_txt(ti, FA_BODY, false, true, CR_DIM, AL_CENTER);
@@ -955,7 +869,6 @@ fn figure_items(i: i64, width: f64, x0: f64, step: i64) {
 fn table_item(t: i64, width: f64, x0: f64, step: i64) -> i64 {
     let size = ST.body * 0.85;
     let bpad = size * 0.35;
-    // The rows: the header row first.
     var rows: i64[>..] = [];
     var r = t + 1;
     while r < EV[t].end - 1 {
@@ -989,7 +902,6 @@ fn table_item(t: i64, width: f64, x0: f64, step: i64) -> i64 {
                     let align = if cell.fl == 3 { AL_RIGHT } else if cell.fl == 2 { AL_CENTER } else { AL_LEFT };
                     TXTS[ti].lh = 1.2;
                     TXTS[ti].align = align;
-                    // Natural widths use the plain cell style.
                     let h, w = measure(ti, 10000.0);
                     nat[n] = max(nat[n], w + 2.0 * bpad);
                     if rk == 0 { TXTS[ti].bold = true; TXTS[ti].color = CR_STRONG; }
@@ -1064,7 +976,6 @@ fn stack_h(c0: i64, c1: i64, gap: f64) -> f64 {
     return h + gap * (max(c1 - c0 - 1, 0) as f64);
 }
 
-// Moves the items made since `from` into CH and returns their range.
 fn take_items(from: i64) -> i64, i64 {
     let c0 = CH.len;
     CH.append(OUTL[from..]);
@@ -1072,8 +983,6 @@ fn take_items(from: i64) -> i64, i64 {
     return c0, CH.len;
 }
 
-// Converts the top-level events lo..hi to items (SlideComposer.convert and
-// FlowLayouter.items), with the reveal steps in LSTEP.
 recursive fn el_items(lo: i64, hi: i64, width: f64, indent: f64) {
     var i = lo;
     while i < hi {
@@ -1119,7 +1028,6 @@ recursive fn el_items(lo: i64, hi: i64, width: f64, indent: f64) {
             ITEMS[it].color = box_accent(sp_text(e.b));
             OUTL.push(it);
         } else if d == D_COLUMNS {
-            // Columns: each column starts at the same step.
             var ncols = 0;
             var j = i + 1;
             while j < e.end - 1 {
@@ -1131,7 +1039,6 @@ recursive fn el_items(lo: i64, hi: i64, width: f64, indent: f64) {
             let cw = (w - gap * ((n - 1) as f64)) / (n as f64);
             var max_step = LSTEP;
             let from = OUTL.len;
-            // OUTL holds each column's count, then its items.
             if ncols == 0 {
                 OUTL.push(0);
                 let at = OUTL.len;
@@ -1184,7 +1091,6 @@ recursive fn el_items(lo: i64, hi: i64, width: f64, indent: f64) {
         } else if d == D_CHART && div_table(i) >= 0 {
             OUTL.push(graphic_item(i, true, w, indent, start));
         } else {
-            // A column outside columns, a chart without a table, or an unknown name.
             LDEPTH++;
             el_items(i + 1, e.end - 1, width, indent);
             LDEPTH--;
@@ -1204,14 +1110,12 @@ fn list_marker(ordered: bool, number: i64, fl: i64) -> i64 {
     return mt;
 }
 
-// FlowLayouter.blockItems.
 recursive fn block_items(i: i64, width: f64, indent: f64, step: i64, flat: bool) {
     let e = EV[i];
     let k = e.k;
     let w = width - indent;
     if k == K_PARA {
         let ti = body_txt(i + 1, e.end - 1, ST.body);
-        // Only top-level paragraphs get the first-line indent.
         TXTS[ti].indent = if indent == 0.0 && !flat { ST.pind } else { 0.0 };
         OUTL.push(text_item(ti, w, step, indent, false));
     } else if k == K_HEAD {
@@ -1280,7 +1184,6 @@ recursive fn block_items(i: i64, width: f64, indent: f64, step: i64, flat: bool)
     }
 }
 
-// --- placement ----------------------------------------------------------------
 
 fn sum_fixed(c0: i64, c1: i64) -> f64 {
     var h = 0.0;
@@ -1294,8 +1197,6 @@ fn sum_flex_min(c0: i64, c1: i64) -> f64 {
     return h;
 }
 
-// Places the items in OUTL c0..c1 top to bottom. Flexible items share the
-// free space (SlideLayoutEngine.place).
 fn place(c0: i64, c1: i64, x: f64, top: f64, available: f64, gap: f64) {
     let n = c1 - c0;
     let gaps = gap * (max(n - 1, 0) as f64);
@@ -1308,7 +1209,6 @@ fn place(c0: i64, c1: i64, x: f64, top: f64, available: f64, gap: f64) {
         if it.flex { grow.push(k); }
     }
     free -= sum_flex_min(c0, c1);
-    // Grow flexible items toward their natural size, evenly.
     while free > 0.5 && grow.len > 0 {
         let share = free / (grow.len as f64);
         var next: i64[>..] = [];
@@ -1329,7 +1229,6 @@ fn place(c0: i64, c1: i64, x: f64, top: f64, available: f64, gap: f64) {
     }
 }
 
-// --- slides (SlideLayoutEngine) ----------------------------------------------
 
 let SW = 960.0;
 let SH = 540.0;
@@ -1340,14 +1239,12 @@ fn margin_x() -> f64 { SW * 0.06 }
 fn margin_top() -> f64 { SH * 0.075 }
 fn margin_bottom() -> f64 { SH * 0.075 }
 
-// Reduces the font size until the text fits, down to a minimum.
 fn fit(ti: i64, width: f64, max_h: f64, minimum: f64) {
     while TXTS[ti].size > minimum && measure_h(ti, width) > max_h {
         TXTS[ti].size = max(minimum, TXTS[ti].size * 0.92);
     }
 }
 
-// True when a line break falls inside a word: the size is too large.
 fn breaks_inside_word(ti: i64) -> bool {
     let t = TXTS[ti];
     fn space(c: u8) -> bool { c == ' ' || c == '\n' || c == '-' }
@@ -1360,7 +1257,6 @@ fn breaks_inside_word(ti: i64) -> bool {
     return false;
 }
 
-// The largest size that fits the box without a line break inside a word.
 fn largest(ti: i64, minimum: f64, maximum: f64, bw: f64, bh: f64) {
     var lo = minimum;
     var hi = maximum;
@@ -1390,7 +1286,6 @@ fn slide_page(si: i64, b0: i64, steps: i64) {
     add_page(SW, SH, b0, steps, si, s.frame, slide_title_line(si));
 }
 
-// The slide's elements as items in OUTL; returns the step count.
 fn slide_items(si: i64, width: f64) -> i64 {
     let s = SL[si];
     LSTEP = 0;
@@ -1408,8 +1303,6 @@ fn slide_items(si: i64, width: f64) -> i64 {
     return LSTEP + 1;
 }
 
-// A stack in the middle of the page. Images, plots, and charts shrink so
-// that the whole stack fits between the margins.
 fn centered_stack(c0: i64, c1: i64, gap: f64) {
     let available = SH - margin_top() - margin_bottom();
     let n = c1 - c0;
@@ -1519,7 +1412,6 @@ fn section_page(si: i64) {
     slide_page(si, b0, steps);
 }
 
-// A Takahashi title or section slide: large text, centered.
 fn tk_title_page(si: i64) {
     let s = SL[si];
     let bw = SW * 0.85;
@@ -1542,7 +1434,6 @@ fn tk_title_page(si: i64) {
     let title = new_txt(r0, FA_HEAD, 96.0);
     set_txt(title, FA_HEAD, true, false, CR_STRONG, AL_CENTER);
     TXTS[title].lh = 1.12;
-    // As large as a Takahashi statement: the title is the one thing to read.
     let room = if !section && (has_meta("subtitle") || by.len > 0) { 0.48 } else { 0.62 };
     largest(title, 36.0, 120.0, bw, SH * room);
     parts.push(title);
@@ -1571,7 +1462,6 @@ fn tk_title_page(si: i64) {
     slide_page(si, b0, 1);
 }
 
-// One main element, as large as fits. Returns false for other elements.
 fn tk_page(si: i64) -> bool {
     let s = SL[si];
     let bw = SW * 0.85;
@@ -1583,7 +1473,6 @@ fn tk_page(si: i64) -> bool {
         let ti = body_txt(s.lo, s.hi, 110.0);
         set_txt(ti, FA_HEAD, true, false, CR_STRONG, AL_CENTER);
         TXTS[ti].lh = 1.15;
-        // The minimum keeps text readable on a phone.
         largest(ti, 34.0, 120.0, bw, bh);
         let h = measure_h(ti, bw);
         text_box(x0, (SH - h) / 2.0, bw, h, ti, 0);
@@ -1594,7 +1483,6 @@ fn tk_page(si: i64) -> bool {
     if s.el == EL_MATH { latex = tb_line(S[s.lo..s.lo + s.hi]); }
     else if s.el == EL_BLOCK && EV[s.lo].k == K_MATH { latex = tb_line(sp_text(EV[s.lo].a)); }
     else if s.el == EL_BLOCK && EV[s.lo].k == K_FIG && EV[s.lo].n == M_IMAGE {
-        // A larger caption: on a Takahashi slide it is the only text.
         let saved = ST;
         ST = scaled(ST, 1.6);
         let saved_flow = FLOWING;
@@ -1620,8 +1508,6 @@ fn tk_page(si: i64) -> bool {
         return true;
     }
     if latex.e == latex.s { return false; }
-    // One equation fills the slide, as a statement does. Very short
-    // equations stop at a size that still looks like mathematics.
     let l = tb(latex);
     if !math_ok(l, true) { return false; }
     var size = 64.0;
@@ -1640,7 +1526,6 @@ fn tk_page(si: i64) -> bool {
     return true;
 }
 
-// True when the slide shows only display equations.
 fn is_math_only(si: i64) -> bool {
     let s = SL[si];
     if s.el == EL_MATH { return true; }
@@ -1694,7 +1579,6 @@ fn content_pages(si: i64, max_scale: f64) {
             if fits {
                 let b0 = BOXES.len;
                 if title >= 0 { make(title, margin_x(), margin_top(), ITEMS[title].h); }
-                // Equations alone sit a little above the middle of the free space.
                 let lift = if math_only { max(0.0, (available - fixed - gaps) * 0.42) } else { 0.0 };
                 place(from, c1, margin_x(), margin_top() + title_h + lift, available - lift, ST.gap);
                 slide_page(si, b0, steps);
@@ -1709,12 +1593,9 @@ fn content_pages(si: i64, max_scale: f64) {
     }
 }
 
-// Too much content at the smallest readable size: the content continues on
-// more slides.
 fn continuation(si: i64, c0: i64, c1: i64, title: i64, title_h: f64, available: f64, gap: f64) {
     var queue: i64[>..] = [];
     queue.append(OUTL[c0..c1]);
-    // Each page is a count and its items.
     var groups: i64[>..] = [0];
     var at = 0;
     var used = 0.0;
@@ -1744,7 +1625,6 @@ fn continuation(si: i64, c0: i64, c1: i64, title: i64, title_h: f64, available: 
             }
         }
         if empty {
-            // One item taller than the slide: show it alone.
             if item.flex { ITEMS[ii].minh = min(item.minh, available); }
             add(ii);
             new_group();
@@ -1767,7 +1647,6 @@ fn continuation(si: i64, c0: i64, c1: i64, title: i64, title_h: f64, available: 
         let p0 = BOXES.len;
         place(o0, OUTL.len, margin_x(), margin_top() + title_h, available, gap);
         OUTL.resize(o0);
-        // Each continuation page has its own reveal steps.
         var max_step = 0;
         for b in p0..BOXES.len {
             if k > 0 {
@@ -1796,10 +1675,8 @@ fn layout_slide(si: i64) {
     }
     if TAKAHASHI && tk_page(si) { return; }
     let p0 = PAGES.len;
-    // Outside the phone profile, Takahashi slides still use large type when it fits.
     content_pages(si, if TAKAHASHI { 1.8 } else { 1.0 });
     if TAKAHASHI {
-        // Center the standard-slide fallback.
         for p in p0..PAGES.len {
             let pg = PAGES[p];
             if pg.b1 <= pg.b0 { continue; }
@@ -1840,7 +1717,6 @@ fn layout_slides(takahashi: bool, typo: i64, static_output: bool) {
     for si in SL.len { layout_slide(si); }
 }
 
-// --- the article (ArticleLayoutEngine) ---------------------------------------
 
 fn frame_heading_item(fi: i64, level: i64, width: f64) -> i64 {
     let f = FR[fi];
@@ -1852,7 +1728,6 @@ fn frame_heading_item(fi: i64, level: i64, width: f64) -> i64 {
     return text_item(ti, width, 0, 0.0, true);
 }
 
-// The article elements as items in OUTL: frame headings and content.
 fn article_items(width: f64) {
     LART = true;
     LSTEP = 0;
@@ -1888,7 +1763,6 @@ fn article_title_items(width: f64, size: f64, sub: f64, by: f64) {
     }
 }
 
-// Paper sizes in points.
 fn paper_size(letter: bool) -> f64, f64 {
     if letter { return 612.0, 792.0; }
     return 595.28, 841.89;
@@ -1901,7 +1775,6 @@ fn layout_article(letter: bool) {
     FLOWING = true;
     let pw, ph = paper_size(letter);
     PAGE_H = ph;
-    // About 66 characters per line at 11 point Palatino.
     let tw = min(360.0, pw - 144.0);
     let mx = (pw - tw) / 2.0;
     let top = 84.0;
@@ -1911,7 +1784,6 @@ fn layout_article(letter: bool) {
     article_items(tw);
     let available = ph - top - bottom;
     let gap = ST.gap;
-    // Pages: for each, a count and the items with their offsets.
     var queue: i64[>..] = [];
     queue.append(OUTL);
     OUTL.clear();
@@ -1929,7 +1801,6 @@ fn layout_article(letter: bool) {
         q++;
         let item = ITEMS[ii];
         let lead = if on_page == 0 { 0.0 } else { gap };
-        // Keep a heading with the start of the next item.
         var need = item.h;
         if item.keep && on_page > 0 && q < queue.len {
             let next = ITEMS[queue[q]];
@@ -1951,7 +1822,6 @@ fn layout_article(letter: bool) {
             }
         }
         if on_page == 0 {
-            // Taller than a page: place it alone.
             put(ii, 0.0);
             new_page();
             continue;
@@ -1985,7 +1855,6 @@ fn layout_article(letter: bool) {
     }
 }
 
-// --- the handout (HandoutLayoutEngine) ----------------------------------------
 
 fn layout_handout(takahashi: bool, letter: bool) {
     layout_slides(takahashi, TY_HANDOUT, true);
@@ -2027,7 +1896,6 @@ fn layout_handout(takahashi: bool, letter: bool) {
         let tb0 = add_box(margin, y, thumb_w, thumb_h, BX_THUMB, 0);
         BOXES[tb0].a = k;
         shape_box(margin, y, thumb_w, thumb_h, BX_STROKE, CR_BORDER, 0.75, 0);
-        // Public notes for the first page of each slide. Private notes never appear here.
         let first = k == 0 || PAGES[k - 1].slide != sp.slide;
         var notes: u8[>..] = [];
         if first && SL[sp.slide].n == 0 { notes_text(notes, sp.frame, D_PUBLIC); }
@@ -2039,7 +1907,6 @@ fn layout_handout(takahashi: bool, letter: bool) {
             TXTS[ti].align = AL_LEFT;
             text_box(notes_x, y, notes_w, min(measure_h(ti, notes_w), row_h), ti, 0);
         } else {
-            // Lines for handwritten notes.
             var ly = y + 18.0;
             while ly < y + row_h - 4.0 {
                 shape_box(notes_x, ly, notes_w, 0.5, BX_RULE, CR_BORDER, 0.5, 0);
@@ -2052,7 +1919,6 @@ fn layout_handout(takahashi: bool, letter: bool) {
     finish();
 }
 
-// --- the poster (PosterLayoutEngine) -----------------------------------------
 
 var POSTER_BODY = 0.0;
 
@@ -2065,7 +1931,6 @@ fn poster_style(body: f64) -> LStyle {
     return s;
 }
 
-// Sizes: 0 A0, 1 A1, 2 48 × 36 in, 3 42 × 42 in.
 fn poster_portrait(size: i64) -> f64, f64 {
     let mm = 72.0 / 25.4;
     if size == 1 { return 594.0 * mm, 841.0 * mm; }
@@ -2082,7 +1947,6 @@ fn poster_build(width: f64, height: f64, columns: i64, body: f64) -> bool {
     let cw = (width - 2.0 * margin - gutter * ((columns - 1) as f64)) / (columns as f64);
     let content = width - 2.0 * margin;
     let b0 = BOXES.len;
-    // The title band.
     var y = margin;
     let title = plain_txt(doc_title(), FA_HEAD, body * 3.1);
     set_txt(title, FA_HEAD, true, false, CR_STRONG, AL_CENTER);
@@ -2118,7 +1982,6 @@ fn poster_build(width: f64, height: f64, columns: i64, body: f64) -> bool {
     var queue: i64[>..] = [];
     queue.append(OUTL[from..]);
     OUTL.resize(from);
-    // Fill the columns in order.
     var col = 0;
     var cy = 0.0;
     var on_col = 0;
@@ -2156,7 +2019,6 @@ fn poster_build(width: f64, height: f64, columns: i64, body: f64) -> bool {
             }
         }
         if on_col == 0 {
-            // Taller than a column: it does not fit at this size.
             fits = false;
             put(ii, 0.0);
             next_col();
@@ -2182,7 +2044,6 @@ fn layout_poster(size: i64, landscape: bool) {
     let a0w, a0h = poster_portrait(0);
     let base = 32.0 * sqrt(width * height / (a0w * a0h));
     let minimum = max(20.0, base * 0.62);
-    // Try large type first. Make it smaller until all columns fit.
     var scales: f64[>..] = [];
     var s = 1.35;
     while s >= minimum / base - 0.0001 { scales.push(s); s -= 0.05; }

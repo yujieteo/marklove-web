@@ -1,9 +1,6 @@
-// Source checks, as the app's Linter. Source checks advise. They never stop
-// an export. The result is JSON for the editor's issue list.
 
 import render;
 
-// Format sets (bit masks over the export formats below).
 let FMT_NAMES: (const u8[:])[] = ["slidesPDF", "slidesPNG", "slidesSVG", "articlePDF", "articleHTML", "epub", "handoutPDF",
     "posterPDF", "interactiveHTML", "articleMarkdown", "revisedMarkdown", "video", "narratedVideo", "manimVideo", "podcast",
     "narrationScript", "transcript", "subtitles", "presenterZIP", "listenerZIP", "projectZIP", "promptText"];
@@ -28,7 +25,6 @@ fn f_takahashi() -> i64 { fset(["slidesPDF", "handoutPDF", "interactiveHTML", "v
 struct Diag { code: const u8[:], info: bool, msg: Line, detail: Line, s0: i64, s1: i64, formats: i64, takahashi: bool }
 var DG: Diag[>..] = [];
 var DT: u8[>..] = [];
-// True when JavaScript gave the project's asset list.
 var HAVE_ASSETS = false;
 
 fn dt(t: u8[:]) -> Line {
@@ -41,14 +37,12 @@ fn diag(code: const u8[:], info: bool, msg: u8[:], detail: u8[:], s0: i64, s1: i
     DG.push(Diag { code, info, dt(msg), dt(detail), s0, s1, formats, false });
 }
 
-// --- math --------------------------------------------------------------
 
 fn is_env_supported(env: u8[:]) -> bool {
     for x in MATH_ENVIRONMENTS { if x == env { return true; } }
     return false;
 }
 
-// Unsupported commands in LaTeX at source offset `base`.
 fn check_math(latex: u8[:], s0: i64, s1: i64) {
     let src = SRC[s0..s1];
     let at = index_of(src, latex);
@@ -95,7 +89,6 @@ fn check_math(latex: u8[:], s0: i64, s1: i64) {
             diag("unsupportedMath", false, "This math command is not supported.", d, base + start, base + i, fv);
         }
     }
-    // Braces.
     var depth = 0;
     var escaped = false;
     var opens: i64[>..] = [];
@@ -117,7 +110,6 @@ fn check_math(latex: u8[:], s0: i64, s1: i64) {
     }
 }
 
-// --- images --------------------------------------------------------------
 
 fn check_image(path: u8[:], desc: u8[:], decorative: bool, s0: i64, s1: i64) {
     let kind = media_kind(path);
@@ -144,7 +136,6 @@ fn check_image(path: u8[:], desc: u8[:], decorative: bool, s0: i64, s1: i64) {
     }
 }
 
-// --- blocks --------------------------------------------------------------
 
 recursive fn walk(lo: i64, hi: i64) {
     var i = lo;
@@ -212,7 +203,6 @@ recursive fn walk(lo: i64, hi: i64) {
     }
 }
 
-// The source ranges of decorative figures, for inline image checks.
 fn in_decorative(s0: i64, s1: i64) -> bool {
     for e in EV { if e.k == K_FIG && !e.close && e.fl == 1 && e.s0 <= s0 && s1 <= e.s1 { return true; } }
     return false;
@@ -289,7 +279,6 @@ fn lint() {
             check_math(latex, a.s0, a.s1);
         }
     }
-    // Narration.
     narration_script();
     for m in NMISS {
         var msg: u8[>..] = [];
@@ -305,7 +294,6 @@ fn lint() {
             }
         }
     }
-    // The Takahashi profile.
     takahashi_slides();
     var tw: TWarn[>..] = [];
     tw.append(TW);
@@ -322,7 +310,6 @@ fn lint() {
         }
         DG[DG.len - 1].takahashi = true;
     }
-    // A stable order: by position, then severity. No duplicates.
     var keep: Diag[>..] = [];
     for g in DG {
         var dup = false;
@@ -336,7 +323,6 @@ fn lint() {
 
 fn u16_at(b: i64) -> i64 { U16[min(max(b, 0), U16.len - 1)] as i64 }
 
-// The checks as JSON. Ranges are UTF-16 offsets for the editor.
 fn lint_json(out: u8[>..]&) {
     out.push('[');
     for g, i in DG {

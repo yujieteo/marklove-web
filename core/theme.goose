@@ -1,25 +1,3 @@
-// Themes, as the app's Theme.swift and ThemeCatalog.swift, and the theme CSS
-// of HTMLExporter.themeCSS (the presentation and the article pages).
-//
-// Public functions. `theme` and `accent` are front matter values; "" is absent.
-//   theme_list(out)
-//       JSON array, in picker order:
-//       [{"id","name","credit","darkOnly":bool,"light":PALETTE,"dark":PALETTE}]
-//       PALETTE = {"name","isDark","background","surface","border","dim","text",
-//                  "strong","accent","red","green","yellow","blue","magenta",
-//                  "cyan","orange","violet","series":[6 hex]}. Colors are "#RRGGBB".
-//   theme_resolve(out, theme, accent)
-//       JSON {"id","name","darkOnly":bool,"prefersDark":true|false|null}.
-//       An export uses dark = (user choice) ?? prefersDark ?? false, and writes
-//       data-theme="dark" on <html> for a dark-only theme.
-//   theme_css(out, theme, accent)
-//       The CSS text of HTMLExporter.themeCSS for the resolved theme with the accent.
-//   theme_palette(out, theme, accent, dark: i64, more_contrast: i64)
-//       PALETTE (above) for one appearance, plus "roles": {role: hex} with the
-//       editor color of each highlight role (see highlight.goose).
-//       more_contrast = 1 gives the Increase Contrast palette (7:1).
-//   theme_typography(out)
-//       JSON of Typography (font names per surface) and the editor text style.
 
 import base;
 
@@ -41,10 +19,8 @@ struct Theme {
     dark: TPal,
 }
 
-// The built-in themes, made on first use.
 var TH: Theme[>..] = [];
 
-// --- colors -------------------------------------------------------------
 
 fn th_hexval(c: u8) -> i64 {
     if c >= '0' && c <= '9' { return c - '0'; }
@@ -53,7 +29,6 @@ fn th_hexval(c: u8) -> i64 {
     return -1;
 }
 
-// `#RRGGBB` or `RRGGBB`. Returns false for other text.
 fn th_parse_hex(s0: u8[:]) -> TC, bool {
     var s = trim_sp(s0);
     if s.len > 0 && s[0] == '#' { s = s[1..]; }
@@ -122,7 +97,6 @@ fn th_oklab(c: TC) -> f64, f64, f64 {
 fn th_clamp01(x: f64) -> f64 { min(1.0, max(0.0, x)) }
 fn th_out(x: f64) -> f64 { th_clamp01(th_gamma(th_clamp01(x))) }
 
-// A color from OKLab. Chroma falls until the color is inside sRGB.
 fn th_from_oklab(l: f64, a0: f64, b0: f64) -> TC {
     var a = a0;
     var b = b0;
@@ -148,8 +122,6 @@ fn th_from_oklab(l: f64, a0: f64, b0: f64) -> TC {
 
 fn th_worst(c: TC, bg: TC, surface: TC) -> f64 { min(th_contrast(c, bg), th_contrast(c, surface)) }
 
-// The nearest color with the same hue that has at least `target` contrast
-// with the background and the surface.
 fn th_with_contrast(c: TC, target: f64, bg: TC, surface: TC) -> TC {
     if th_worst(c, bg, surface) >= target { return c; }
     let lighten = th_lum(bg) < 0.18;
@@ -164,7 +136,6 @@ fn th_with_contrast(c: TC, target: f64, bg: TC, surface: TC) -> TC {
     return if lighten { TC { 1.0, 1.0, 1.0 } } else { TC { 0.0, 0.0, 0.0 } };
 }
 
-// Every text role at `minimum` contrast or more. Hues stay the same.
 fn th_accessible(p: TPal, minimum: f64) -> TPal {
     var q = p;
     let t = max(minimum, 4.5);
@@ -183,14 +154,12 @@ fn th_accessible(p: TPal, minimum: f64) -> TPal {
     return q;
 }
 
-// Increase Contrast: text at 7:1 or more, and stronger borders.
 fn th_increased(p: TPal) -> TPal {
     var q = th_accessible(p, 7.0);
     q.border = th_mix(p.border, q.dim, 0.6);
     return q;
 }
 
-// --- the catalog --------------------------------------------------------
 
 fn th_pal(name: const u8[:], dark: bool, bg: u8[:], surface: u8[:], border: u8[:], dim: u8[:],
           text: u8[:], strong: u8[:], accent: u8[:], red: u8[:], green: u8[:], yellow: u8[:],
@@ -201,13 +170,11 @@ fn th_pal(name: const u8[:], dark: bool, bg: u8[:], surface: u8[:], border: u8[:
            orange: th_c(orange), violet: th_c(violet) }
 }
 
-// Adds a theme with light and dark palettes, made accessible (4.5:1).
 fn th_add(id: const u8[:], name: const u8[:], credit: const u8[:], light: TPal, dark: TPal) {
     TH.push(Theme { id: id, name: name, credit: credit, dark_only: false,
                     light: th_accessible(light, 4.5), dark: th_accessible(dark, 4.5) });
 }
 
-// Adds a dark-only theme. Both appearances use the dark palette.
 fn th_add_dark(id: const u8[:], name: const u8[:], credit: const u8[:], dark: TPal) {
     let d = th_accessible(dark, 4.5);
     TH.push(Theme { id: id, name: name, credit: credit, dark_only: true, light: d, dark: d });
@@ -309,11 +276,9 @@ fn th_find(id: u8[:]) -> i64 {
     return -1;
 }
 
-// --- front matter -------------------------------------------------------
 
 struct TAlias { name: const u8[:], id: const u8[:], dark: i64 }
 
-// Front matter names of variants. dark: 1 dark, 0 light, -1 not given.
 let TH_ALIASES: TAlias[] = [
     TAlias { "catppuccin-latte", "catppuccin", 0 }, TAlias { "catppuccin-mocha", "catppuccin", 1 },
     TAlias { "latte", "catppuccin", 0 }, TAlias { "mocha", "catppuccin", 1 },
@@ -329,10 +294,8 @@ let TH_ALIASES: TAlias[] = [
     TAlias { "github-light", "github", 0 }, TAlias { "github-dark", "github", 1 },
 ];
 
-// The base letter of a Latin-1 letter with a diacritic (the second byte of
-// a C3 sequence), or 0 when it has no decomposition.
 fn th_fold_c3(b: u8) -> u8 {
-    let x = b | 0x20;   // upper case C3 80..9E to lower case C3 A0..BE
+    let x = b | 0x20;
     if x >= 0xA0 && x <= 0xA5 { return 'a'; }
     if x == 0xA7 { return 'c'; }
     if x >= 0xA8 && x <= 0xAB { return 'e'; }
@@ -344,7 +307,6 @@ fn th_fold_c3(b: u8) -> u8 {
     return 0;
 }
 
-// Lower case, with `-` for spaces and underscores, and no accents.
 fn th_normalize(out: u8[>..]&, v: u8[:]) {
     let start = out.len;
     var i = 0;
@@ -360,7 +322,7 @@ fn th_normalize(out: u8[>..]&, v: u8[:]) {
             }
             i += 2;
         } else if (c == 0xCC || (c == 0xCD && i + 1 < v.len && v[i + 1] <= 0xAF)) && i + 1 < v.len {
-            i += 2;   // a combining diacritic, U+0300 to U+036F
+            i += 2;
         } else if c == ' ' || c == '_' {
             out.push('-');
             i++;
@@ -369,7 +331,6 @@ fn th_normalize(out: u8[>..]&, v: u8[:]) {
             i++;
         }
     }
-    // Trim the white space that is left (tabs).
     var a = start;
     while a < out.len && (out[a] == '\t') { a++; }
     var b = out.len;
@@ -380,7 +341,6 @@ fn th_normalize(out: u8[>..]&, v: u8[:]) {
     out.resize(start + b - a);
 }
 
-// The theme index and the preferred appearance (1 dark, 0 light, -1 none).
 fn th_resolve(value: u8[:]) -> i64, i64 {
     th_init();
     if value.len == 0 { return 0, -1; }
@@ -402,7 +362,6 @@ fn th_resolve(value: u8[:]) -> i64, i64 {
         let b = th_find(v[..v.len - 5]);
         if b >= 0 { return b, 1; }
     }
-    // A longer name that starts with a theme id, such as `gruvbox-material`.
     var best = -1;
     for th, i in TH {
         if has_prefix(v, th.id) && (best < 0 || th.id.len > TH[best].id.len) { best = i; }
@@ -415,7 +374,6 @@ fn th_resolve(value: u8[:]) -> i64, i64 {
     return 0, -1;
 }
 
-// Theme.prefersDark: Nord without a variant asks for dark.
 fn th_prefers_dark(value: u8[:]) -> i64 {
     let t, d = th_resolve(value);
     if value.len > 0 && TH[t].id == "nord" && d < 0 { return 1; }
@@ -437,7 +395,6 @@ fn th_pick_accent(p: TPal, value: u8[:]) -> TC, bool {
     return c, ok;
 }
 
-// The resolved theme with the accent applied (Theme.withAccent).
 fn th_theme(value: u8[:], accent: u8[:]) -> Theme {
     let i, d = th_resolve(value);
     var t = TH[i];
@@ -452,7 +409,6 @@ fn th_theme(value: u8[:], accent: u8[:]) -> Theme {
 
 fn th_palette_of(t: Theme, dark: bool) -> TPal { if dark || t.dark_only { t.dark } else { t.light } }
 
-// --- output -------------------------------------------------------------
 
 fn th_bool(out: u8[>..]&, b: bool) { out.append(if b { "true" } else { "false" }); }
 
@@ -481,7 +437,6 @@ fn th_palette_json(out: u8[>..]&, p: TPal, roles: bool) {
     }
     out.push(']');
     if roles {
-        // ThemePalette.highlight(role) in MarkloveRender/Platform.swift.
         out.append(",\"roles\":{\"text\":\"");
         th_hex(out, p.text);
         out.push('"');
@@ -532,7 +487,6 @@ fn theme_palette(out: u8[>..]&, theme: u8[:], accent: u8[:], dark: i64, more_con
     th_palette_json(out, if more_contrast != 0 { th_increased(p) } else { p }, true);
 }
 
-// HTMLExporter.cssVariables.
 fn th_vars(out: u8[>..]&, p: TPal) {
     fn v(name: u8[:], c: TC, last: bool) {
         out.append("--"); out.append(name); out.append(": "); th_hex(out, c);
@@ -546,7 +500,6 @@ fn th_vars(out: u8[>..]&, p: TPal) {
     v("type", p.yellow, false); v("fn", p.blue, true);
 }
 
-// HTMLExporter.themeCSS: the colors in light and dark, and for Increase Contrast.
 fn theme_css(out: u8[>..]&, theme: u8[:], accent: u8[:]) {
     let t = th_theme(theme, accent);
     let light = th_palette_of(t, false);
@@ -566,8 +519,6 @@ fn theme_css(out: u8[>..]&, theme: u8[:], accent: u8[:]) {
     out.append("}");
 }
 
-// Typography (Theme.swift) and the editor text style (SourceStyle,
-// EditorScreen, AppSettings in the app).
 fn theme_typography(out: u8[>..]&) {
     let cp = "[\"CourierPrime-Regular\",\"Courier\"]";
     let cps = "[\"CourierPrimeSans-Regular\",\"CourierPrime-Regular\",\"Courier\"]";
