@@ -175,7 +175,10 @@ function showProjectName(name: string): void {
 }
 
 async function openProject(id: string, { preview = false }: { preview?: boolean } = {}): Promise<void> {
-    if (state.project && state.project.id !== id) { await flushSave(); await saveVersion({ auto: true }); saveEditorState(); }
+    if (state.project) {
+        if (!(await flushSave())) return;
+        if (state.project.id !== id) { await saveVersion({ auto: true }); saveEditorState(); }
+    }
     const p = await S.project(id);
     if (!p) return;
     state.project = p;
@@ -288,7 +291,7 @@ async function deleteProject(p: Project): Promise<boolean> {
 
 async function saveZipCopy(p: Project | null = state.project): Promise<void> {
     const target = p ?? currentProject();
-    if (target.id === currentProject().id) await flushSave();
+    if (target.id === currentProject().id && !(await flushSave())) return;
     const proj = must(await S.project(target.id), "the project to copy");
     const ctx = { name: proj.name, source: proj.markdown, assets: await S.assetBlobs(target.id), gitName: gitName(proj.markdown), gitEmail: S.settings.gitEmail };
     const blob = await X.projectZip(ctx, S.settings.gitEnabled ? await S.versions(target.id) : []);
@@ -309,7 +312,7 @@ async function rename(name: string): Promise<void> {
 }
 
 async function duplicate(): Promise<void> {
-    await flushSave();
+    if (!(await flushSave())) return;
     const p = await S.duplicateProject(currentProject());
     await firstVersion(p, `Create project “${p.name}”`);
     await openProject(p.id);
@@ -335,18 +338,19 @@ function textChanged(): void {
     updateEquation();
 }
 
-async function flushSave(): Promise<void> {
+async function flushSave(): Promise<boolean> {
     clearTimeout(state.saveTimer);
     const p = state.project;
-    if (!p || readOnly()) return;
+    if (!p || readOnly()) return true;
     const t = E.text();
-    if (p.markdown === t) return;
+    if (p.markdown === t) return true;
     const saved = p.markdown;
     p.markdown = t;
-    try { await S.saveProject(p); }
+    try { await S.saveProject(p); return true; }
     catch (e) {
         if (p.markdown === t) p.markdown = saved;
         announce("Marklove could not save the change. " + errorMessage(e));
+        return false;
     }
 }
 
@@ -361,7 +365,7 @@ function gitName(md: string): string { return S.settings.gitName || frontValue(m
 async function saveVersion({ explicit = false, message = "" }: SaveVersionOptions = {}): Promise<boolean> {
     const p = state.project;
     if (!p || readOnly()) return false;
-    await flushSave();
+    if (!(await flushSave())) return false;
     if (!S.settings.gitEnabled) { if (explicit) announce("Saved. Versions are off in Settings."); return false; }
     if (tooLarge(p.markdown)) { if (explicit) announce("The Markdown file is larger than 512 KB. Split it into more projects."); return false; }
     const all = await S.versions(p.id);

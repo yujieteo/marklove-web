@@ -4520,10 +4520,13 @@ function showProjectName(name) {
   document.title = name + " – Marklove";
 }
 async function openProject(id, { preview = false } = {}) {
-  if (state.project && state.project.id !== id) {
-    await flushSave();
-    await saveVersion({ auto: true });
-    saveEditorState();
+  if (state.project) {
+    if (!await flushSave())
+      return;
+    if (state.project.id !== id) {
+      await saveVersion({ auto: true });
+      saveEditorState();
+    }
   }
   const p = await project(id);
   if (!p)
@@ -4671,8 +4674,8 @@ async function deleteProject2(p) {
 }
 async function saveZipCopy(p = state.project) {
   const target = p ?? currentProject();
-  if (target.id === currentProject().id)
-    await flushSave();
+  if (target.id === currentProject().id && !await flushSave())
+    return;
   const proj = must(await project(target.id), "the project to copy");
   const ctx = { name: proj.name, source: proj.markdown, assets: await assetBlobs(target.id), gitName: gitName(proj.markdown), gitEmail: settings.gitEmail };
   const blob = await projectZip(ctx, settings.gitEnabled ? await versions(target.id) : []);
@@ -4693,7 +4696,8 @@ async function rename(name) {
   await refreshList();
 }
 async function duplicate() {
-  await flushSave();
+  if (!await flushSave())
+    return;
   const p = await duplicateProject(currentProject());
   await firstVersion(p, `Create project “${p.name}”`);
   await openProject(p.id);
@@ -4728,18 +4732,20 @@ async function flushSave() {
   clearTimeout(state.saveTimer);
   const p = state.project;
   if (!p || readOnly())
-    return;
+    return true;
   const t = text2();
   if (p.markdown === t)
-    return;
+    return true;
   const saved = p.markdown;
   p.markdown = t;
   try {
     await saveProject(p);
+    return true;
   } catch (e) {
     if (p.markdown === t)
       p.markdown = saved;
     announce("Marklove could not save the change. " + errorMessage3(e));
+    return false;
   }
 }
 function autoVersion() {
@@ -4757,7 +4763,8 @@ async function saveVersion({ explicit = false, message = "" } = {}) {
   const p = state.project;
   if (!p || readOnly())
     return false;
-  await flushSave();
+  if (!await flushSave())
+    return false;
   if (!settings.gitEnabled) {
     if (explicit)
       announce("Saved. Versions are off in Settings.");

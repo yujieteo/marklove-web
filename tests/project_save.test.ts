@@ -53,3 +53,21 @@ test("project-save.sm.md row saving/save_failed: an edit whose save failed is st
     await openFromMenu("A");
     expect(E.text()).toBe("lpha\n");
 });
+
+test("project-save.sm.md row dirty/open_other: when the storage is full, the switch stops and keeps the edit", async () => {
+    dom.textarea.key("x");
+    expect(E.text()).toBe("pha\n");
+    failSaves.remaining = 2;
+    await openFromMenu("B");
+    expect(E.text()).toBe("pha\n");
+    expect(failSaves.remaining).toBe(1);
+    await openFromMenu("A");
+    expect(E.text()).toBe("pha\n");
+    expect(failSaves.remaining).toBe(0);
+    await openFromMenu("A");
+    expect(E.text()).toBe("pha\n");
+    await openFromMenu("B");
+    expect(E.text()).toBe("beta\n");
+    await openFromMenu("A");
+    expect(E.text()).toBe("pha\n");
+});
