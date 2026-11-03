@@ -245,7 +245,7 @@ function setReading(on: boolean): void {
   nextButton.hidden = on;
   counter.hidden = on;
   render(false);
-  slides[index]?.scrollIntoView(on ? { block: "start" } : undefined);
+  if (on) slides[index]?.scrollIntoView({ block: "start" });
 }
 
 function fitStatements(slide: Element): void {

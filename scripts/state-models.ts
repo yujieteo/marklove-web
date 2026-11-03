@@ -12,7 +12,7 @@ interface Model {
 }
 
 const MODELS: readonly Model[] = [
-    { machine: "docs/state/voice.sm.md", covers: ["src/voice.ts"], hash: "59423c1d35e977a32c9c445594074603e3456498ed9726ea0d51ef2c0bb93ae5" },
+    { machine: "docs/state/voice.sm.md", covers: ["src/voice.ts"], hash: "c4b74c885b0968980b498a07ca61d45db7c66dc68c4db8a2cdabbd6d5392d131" },
     { machine: "docs/state/project-save.sm.md", covers: ["src/app.ts"], hash: "b858b5cd098231ffe1c2d59fbe3691771efcf4405d2d158a03a66aab7cbc7a03" },
 ];
 

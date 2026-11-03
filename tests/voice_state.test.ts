@@ -6,15 +6,23 @@ let releaseModel: () => void = () => {};
 const modelReady = new Promise<void>((resolve) => { releaseModel = resolve; });
 
 mock.module(KOKORO_URL, () => ({
-    KokoroTTS: {
-        async from_pretrained(): Promise<unknown> {
+    KokoroTTS: class KokoroTTS {
+        static async from_pretrained(): Promise<unknown> {
             await modelReady;
             return { voices: { af_heart: {} }, generate: async () => ({ audio: new Float32Array(1) }) };
-        },
+        }
     },
 }));
 
 const Voice = await import("../src/voice.ts");
+
+test("load gives a narrator when KokoroTTS is a class", async () => {
+    const loading = Voice.load();
+    releaseModel();
+    const narrator = await loading;
+    expect(await narrator.generate("Hello.", Voice.DEFAULT_VOICE)).toBeInstanceOf(Float32Array);
+    await Voice.remove();
+});
 
 test.failing("voice.sm.md row loading/remove: the voice stays removed when remove runs during the download", async () => {
     const loading = Voice.load();

@@ -2819,7 +2819,7 @@ var SIZE_TEXT = "about 90 MB";
 var SAMPLE_TEXT = "This is the voice of your narration. It speaks the text of your slides.";
 var MIX_TAIL_SECONDS = 0.5;
 function method(owner, name) {
-  const fn = owner[name];
+  const fn = Reflect.get(owner, name);
   if (typeof fn !== "function")
     throw new Error("The voice library has no " + name + ".");
   return (...args) => Reflect.apply(fn, owner, args);
@@ -2847,7 +2847,7 @@ function load3(progress) {
   if (!loading) {
     loading = (async () => {
       const lib = await import(KOKORO);
-      if (!isRecord(lib) || !isRecord(lib["KokoroTTS"]))
+      if (!isRecord(lib) || typeof lib["KokoroTTS"] !== "function")
         throw new Error("The voice library did not load.");
       const files = new Map;
       const model = await method(lib["KokoroTTS"], "from_pretrained")(MODEL, {

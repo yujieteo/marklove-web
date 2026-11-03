@@ -25,8 +25,8 @@ export interface Clips {
     durations: string;
 }
 
-function method(owner: Record<string, unknown>, name: string): (...args: unknown[]) => unknown {
-    const fn = owner[name];
+function method(owner: object, name: string): (...args: unknown[]) => unknown {
+    const fn: unknown = Reflect.get(owner, name);
     if (typeof fn !== "function") throw new Error("The voice library has no " + name + ".");
     return (...args) => Reflect.apply(fn, owner, args);
 }
@@ -53,7 +53,7 @@ export function load(progress?: (fraction: number) => void): Promise<Narrator> {
     if (!loading) {
         loading = (async () => {
             const lib: unknown = await import(KOKORO);
-            if (!isRecord(lib) || !isRecord(lib["KokoroTTS"])) throw new Error("The voice library did not load.");
+            if (!isRecord(lib) || typeof lib["KokoroTTS"] !== "function") throw new Error("The voice library did not load.");
             const files = new Map<string, [number, number]>();
             const model = await method(lib["KokoroTTS"], "from_pretrained")(MODEL, {
                 dtype: "q8", device: "wasm",
