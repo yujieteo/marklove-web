@@ -1,26 +1,15 @@
-// Shared state and text helpers for the Marklove core.
-//
-// The core keeps its data in global grow-only arrays. Each call from
-// JavaScript starts with `reset` and parses the source again, so no state
-// lives between calls except the source itself.
 
 import std;
 import math;
 
 extern fn ml_arg(i: i32, out: u8[>..]&);
 
-// A run of bytes in the string arena `S`.
 struct Span { o: i64, n: i64 }
 
-// The source text of the current document.
 var SRC: u8[>..] = [];
-// The string arena: decoded text, joined paragraph lines, and titles.
 var S: u8[>..] = [];
-// The output of the current call.
 var OUT: u8[>..] = [];
 
-// The largest text that the core takes or makes, and the most matches that
-// Find and sam keep. A data stack holds 8 MB with no guard page (see io.h).
 let MAX_TEXT = 512 * 1024;
 let MAX_MATCHES = 100000;
 
@@ -34,7 +23,6 @@ fn sp_add(t: u8[:]) -> Span {
 
 fn sp_empty(sp: Span) -> bool { sp.n == 0 }
 
-// Copies a part of the source into the arena.
 fn sp_src(a: i64, b: i64) -> Span {
     let o = S.len;
     for i in a..b { S.push(SRC[i]); }
@@ -79,7 +67,6 @@ fn index_of_byte(s: u8[:], c: u8, from: i64 = 0) -> i64 {
 
 fn contains_byte(s: u8[:], c: u8) -> bool { index_of_byte(s, c) >= 0 }
 
-// Trims spaces and tabs.
 fn trim_sp(s: u8[:]) -> u8[:] {
     var a = 0;
     var b = s.len;
@@ -88,7 +75,6 @@ fn trim_sp(s: u8[:]) -> u8[:] {
     return s[a..b];
 }
 
-// Trims all white space, new lines too.
 fn trim_all(s: u8[:]) -> u8[:] {
     var a = 0;
     var b = s.len;
@@ -102,14 +88,12 @@ fn all_bytes(s: u8[:], c: u8) -> bool {
     return true;
 }
 
-// The number of characters (code points) in UTF-8 text.
 fn char_count(s: u8[:]) -> i64 {
     var n = 0;
     for c in s { if (c & 0xC0) != 0x80 { n++; } }
     return n;
 }
 
-// The byte length of the UTF-8 sequence that starts with c.
 fn utf8_len(c: u8) -> i64 {
     if c < 0x80 { return 1; }
     if c < 0xE0 { return 2; }
@@ -117,7 +101,6 @@ fn utf8_len(c: u8) -> i64 {
     return 4;
 }
 
-// The UTF-16 length of UTF-8 text. JavaScript offsets are UTF-16 units.
 fn utf16_len(s: u8[:]) -> i64 {
     var n = 0;
     for c in s {
@@ -127,7 +110,6 @@ fn utf16_len(s: u8[:]) -> i64 {
     return n;
 }
 
-// HTML and XML escapes for text and attribute values.
 fn esc(out: u8[>..]&, s: u8[:]) {
     for c in s {
         if c == '&' { out.append("&amp;"); }
@@ -138,7 +120,6 @@ fn esc(out: u8[>..]&, s: u8[:]) {
     }
 }
 
-// A JSON string literal.
 fn json_str(out: u8[>..]&, s: u8[:]) {
     out.push('"');
     for c in s {
@@ -153,14 +134,11 @@ fn json_str(out: u8[>..]&, s: u8[:]) {
     out.push('"');
 }
 
-// A number with fixed decimals, for SVG coordinates.
 fn fmt_fixed(out: u8[>..]&, v: f64, d: i64) {
     if is_nan(v) || is_inf(v) { out.append("0"); return; }
     format_flt(out, v, d);
 }
 
-// Reads a number such as "1.5", "-2", "1e3" or "pi". Returns false when the
-// text is not a number.
 fn parse_number(s: u8[:]) -> f64, bool {
     let t = trim_sp(s);
     if t.len == 0 { return 0.0, false; }
@@ -170,7 +148,6 @@ fn parse_number(s: u8[:]) -> f64, bool {
     return v, ok;
 }
 
-// A URL-safe slug: lower-case ASCII letters and digits with dashes.
 fn slug(out: u8[>..]&, s: u8[:]) {
     let start = out.len;
     var last_dash = false;
@@ -182,7 +159,6 @@ fn slug(out: u8[>..]&, s: u8[:]) {
     if out.len - start > 60 { out.resize(start + 60); }
 }
 
-// Base64, for images and fonts inside exported files.
 fn base64(out: u8[>..]&, data: u8[:]) {
     let T = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     var i = 0;
@@ -202,9 +178,7 @@ fn base64(out: u8[>..]&, data: u8[:]) {
     }
 }
 
-// --- Unicode, as Swift's Character properties ------------------------------
 
-// One code point at byte i: the value and its length in bytes.
 fn uni_decode(t: u8[:], i: i64) -> i64, i64 {
     let b = t[i] as i64;
     let n = min(utf8_len(t[i]), t.len - i);
@@ -220,7 +194,6 @@ fn uni_extends(cp: i64) -> bool {
         || (cp >= 0x1F3FB && cp <= 0x1F3FF) || cp == 0x200D || (cp >= 0xE0020 && cp <= 0xE007F);
 }
 
-// Letters and numbers outside ASCII (an approximation of Unicode's tables).
 fn uni_alnum(cp: i64) -> bool {
     if cp < 0x80 { return is_alnum(cp as u8); }
     if cp < 0xC0 { return cp == 0xAA || cp == 0xB5 || cp == 0xBA || cp == 0xB2 || cp == 0xB3 || cp == 0xB9 || (cp >= 0xBC && cp <= 0xBE); }

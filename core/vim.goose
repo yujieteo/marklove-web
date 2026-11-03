@@ -1,44 +1,6 @@
-// The Marklove Vim mode, ported from MarkloveCore Vim/VimEngine.swift,
-// Vim/VimBuffer.swift and Text/VimRegex.swift.
-//
-// Public functions:
-//   vim_reset()
-//       Normal mode, no pending keys, and an empty undo history. Call it when
-//       Vim mode is turned on and when another document is opened.
-//   vim_clipboard(text: u8[:])
-//       The system clipboard text, for the "+ and "* registers (p and P).
-//   vim_key(out: u8[>..]&, text: u8[:], cursor: i64, sel_start: i64, sel_end: i64, key: u8[:])
-//       Handles one key. Offsets are UTF-8 byte offsets. `cursor` is not used:
-//       the engine reads the cursor from the selection, as the Swift engine does.
-//       Appends one JSON object to out:
-//       {"handled":bool,"text":string|null,"cursor":n,"sel":[a,b],
-//        "mode":"normal|insert|visual|visual-line|command","status":string,
-//        "action":""|"save"|"discard"|"copy"[,"clip":string]}
-//       handled=false: the textarea must do its default action (typed text in
-//       Insert mode, and Ctrl keys that Vim does not use). text=null: no change.
-//       status: the command line (with its ":", "/" or "?") or a message.
-//       action save is :w, discard is :q! and :e! (go back to the saved
-//       version), copy puts clip on the system clipboard ("+y).
-//   vim_find(out, text, pattern, ignore_case)
-//   vim_replace(out, text, pattern, ignore_case, replacement, sel_s, sel_e, all)
-//       Find and Replace with Vim patterns. The output is as edit_find and
-//       edit_replace.
-//
-// Key names: one character as UTF-8, "Escape", "Enter", "Backspace", "Tab",
-// "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", and "Ctrl-x" for a
-// Control key (Ctrl-[ is Escape).
-//
-// The engine keeps its own undo history (u and Ctrl-r), because the text
-// view gets its new text as one value. A change that the engine did not make
-// (Insert mode typing, a toolbar command) becomes one undo step at the next key
-// outside Insert mode.
-//
-// Text positions in the engine are code point indexes (Swift uses Characters).
 
 import base;
 
-// ---------------------------------------------------------------------------
-// Characters (code points)
 
 fn vch_ws(c: i64) -> bool {
     c == 32 || (c >= 9 && c <= 13) || c == 0x85 || c == 0xA0 || c == 0x1680 || (c >= 0x2000 && c <= 0x200A) ||
@@ -59,7 +21,6 @@ fn vch_letter(c: i64) -> bool {
     return !vch_ws(c) && !vch_punct_hi(c);
 }
 
-// Letter, number or "_": the Vim word characters and ICU \w.
 fn vch_word(c: i64) -> bool { vch_letter(c) || vch_digit(c) || c == '_' }
 
 fn vch_lower(c: i64) -> i64 {
@@ -86,7 +47,6 @@ fn vch_upper(c: i64) -> i64 {
     return c;
 }
 
-// Swift: s == s.uppercased() ? s.lowercased() : s.uppercased()
 fn vch_toggle(c: i64) -> i64 { if vch_upper(c) == c { return vch_lower(c); } return vch_upper(c); }
 
 fn vm_put_cp(out: u8[>..]&, c: i64) {
@@ -99,7 +59,6 @@ fn vm_put_cp(out: u8[>..]&, c: i64) {
     }
 }
 
-// The code point at byte i of s, and its byte length.
 fn vm_cp_at(s: u8[:], i: i64) -> i64, i64 {
     let c = s[i] as i64;
     var len = utf8_len(s[i]);
@@ -116,12 +75,9 @@ fn vm_decode(out: i64[>..]&, s: u8[:]) {
     while i < s.len { let c, l = vm_cp_at(s, i); out.push(c); i += l; }
 }
 
-// ---------------------------------------------------------------------------
-// The buffer: the text as code points, as VimBuffer.
 
 var VTXT: u8[>..] = [];
 var VCH: i64[>..] = [];
-// The byte offset of each code point, plus one entry for the end.
 var VOFF: i64[>..] = [];
 
 fn vb_load() {
@@ -137,7 +93,6 @@ fn vb_load() {
     VOFF.push(VTXT.len);
 }
 
-// The code point index at a byte offset.
 fn vb_char_at(byte: i64) -> i64 {
     var lo = 0;
     var hi = VCH.len;
@@ -213,7 +168,6 @@ fn vb_indent(out: u8[>..]&, i: i64) {
     vb_str(out, s, vb_fnb(s));
 }
 
-// In Normal mode the cursor sits on a character, not after the last one.
 fn vb_clamp(i0: i64) -> i64 {
     let i = max(0, min(i0, VCH.len));
     let s = vb_ls(i);
@@ -222,7 +176,6 @@ fn vb_clamp(i0: i64) -> i64 {
     return i;
 }
 
-// desired < 0: keep the column of i.
 fn vb_move_lines(i: i64, delta: i64, desired: i64) -> i64 {
     var col = desired;
     if col < 0 { col = vb_col(i); }
@@ -255,7 +208,6 @@ fn vb_next_word(i: i64, big: bool) -> i64 {
     if start != CC_SPACE && start != CC_NL {
         while k < n && vb_cls(VCH[k], big) == start { k++; }
     }
-    // Skip white space, but stop at an empty line.
     while k < n {
         let c = vb_cls(VCH[k], big);
         if c == CC_NL {
@@ -344,7 +296,6 @@ fn vb_prev_sentence(i: i64) -> i64 {
     return 0;
 }
 
-// f F t T. Returns the target and true, or false when there is none.
 fn vb_find(cmd: i64, target: i64, i: i64, n: i64, repeating: bool) -> i64, bool {
     let s = vb_ls(i);
     let e = vb_le(i);
@@ -501,7 +452,6 @@ fn vb_text_object(c: i64, around: bool, i: i64) -> bool {
     return false;
 }
 
-// The word under i: start and end, or false.
 fn vb_word_under(i: i64) -> i64, i64, bool {
     if i >= VCH.len || vb_cls(VCH[i], false) != CC_WORD { return 0, 0, false; }
     var s = i;
@@ -511,7 +461,6 @@ fn vb_word_under(i: i64) -> i64, i64, bool {
     return s, e, true;
 }
 
-// Escapes the characters that are special in a magic Vim pattern.
 fn vb_escape_vim(out: u8[>..]&, t: u8[:]) {
     for c in t {
         if c == '\\' || c == '.' || c == '*' || c == '[' || c == ']' || c == '~' || c == '^' || c == '$' || c == '/' { out.push('\\'); }
@@ -519,8 +468,6 @@ fn vb_escape_vim(out: u8[>..]&, t: u8[:]) {
     }
 }
 
-// The next match from i: the search continues at the other end of the text.
-// Status: 0 no match, 1 found, 2 error (the message is in VRE_ERR).
 fn vb_search(pat: u8[:], from: i64, fwd: bool) -> i64, i64 {
     if !vre_compile(pat, -1, true) { return 0, 2; }
     vre_budget();
@@ -545,9 +492,6 @@ fn vb_search(pat: u8[:], from: i64, fwd: bool) -> i64, i64 {
     return last, 1;
 }
 
-// ---------------------------------------------------------------------------
-// Vim regular expressions, as VimRegex: the Vim syntax is parsed to a tree,
-// compiled to a program, and run by a backtracking matcher on VCH.
 
 let RK_CHAR = 1;
 let RK_ANY = 2;
@@ -572,8 +516,6 @@ let OP_SAVE = 22;
 let OP_CHECK = 23;
 let OP_MATCH = 24;
 
-// Slots: 2k and 2k+1 for group k (1 to 9), 20 and 21 for \zs and \ze, then
-// the loop marks that stop a loop on an empty match.
 let VRE_SLOTS = 64;
 let VRE_FIRST_MARK = 22;
 let VRE_LIMIT = 20000000;
@@ -581,7 +523,6 @@ let VRE_LIMIT = 20000000;
 struct VRNode { k: i64, x: i64, y: i64, g: i64, c: i64, nx: i64 }
 struct VRInst { op: i64, x: i64, y: i64 }
 struct VRSet { neg: bool, o: i64, n: i64 }
-// k 0: the range lo..hi. k 1: the class lo ('d', 's', 'w' or a POSIX code).
 struct VRItem { k: i64, lo: i64, hi: i64, neg: bool }
 struct VRFrame { ib: i64, ab: i64, grp: i64 }
 struct VRBt { pc: i64, sp: i64, slot: i64, old: i64 }
@@ -601,7 +542,6 @@ var VRE_ICASE = false;
 var VRE_MARKS = 0;
 var VRE_STEPS = 0;
 var VRE_OVER = false;
-// The last match: the match range (\zs and \ze) and the whole match.
 var VRM_S = 0;
 var VRM_E = 0;
 var VRM_WS = 0;
@@ -678,7 +618,6 @@ fn vre_class_node(cls: i64, neg: bool) -> i64 {
     return vre_add(RK_SET, s, 0);
 }
 
-// Joins the items from ib into one sequence node.
 fn vre_seq_end(ib: i64) -> i64 {
     let cnt = VRITEMS.len - ib;
     if cnt == 1 {
@@ -732,9 +671,6 @@ fn vre_has_upper(pattern: u8[:]) -> bool {
     return false;
 }
 
-// Compiles a Vim pattern. ignore: -1 not given, 0 no, 1 yes. Without \c or \C,
-// smart ignores case when the pattern has no capital letter. Returns false
-// with the message in VRE_ERR when the pattern is not valid.
 fn vre_compile(pattern: u8[:], ignore: i64, smart: bool) -> bool {
     VRN.clear(); VRP.clear(); VRS.clear(); VRI.clear();
     VRITEMS.clear(); VRALTS.clear(); VRFR.clear(); VRJ.clear();
@@ -743,7 +679,6 @@ fn vre_compile(pattern: u8[:], ignore: i64, smart: bool) -> bool {
     var ch: i64[>..] = [];
     vm_decode(ch, pattern);
     let n = ch.len;
-    // 0 very magic, 1 magic, 2 nomagic, 3 very nomagic
     var mode = 1;
     var icase = -1;
     var i = 0;
@@ -788,7 +723,6 @@ fn vre_compile(pattern: u8[:], ignore: i64, smart: bool) -> bool {
         groups++;
         if groups <= 9 { open(groups); } else { open(-1); }
     }
-    // After \{ or {: [-][n][,[m]] then } or \}.
     fn brace(start: i64) -> i64 {
         var j = start;
         var lazy = false;
@@ -814,7 +748,6 @@ fn vre_compile(pattern: u8[:], ignore: i64, smart: bool) -> bool {
         else { quant(max(a, 0), b, !lazy); }
         return j + 1;
     }
-    // A POSIX class name at ch[a..b] as a class code, or 0.
     fn posix(a: i64, b: i64) -> i64 {
         var name: u8[..16] = [];
         for k in a..b { if ch[k] < 128 && name.len < 16 { name.push(ch[k] as u8); } }
@@ -832,8 +765,6 @@ fn vre_compile(pattern: u8[:], ignore: i64, smart: bool) -> bool {
         if name == "print" { return 'R'; }
         return 0;
     }
-    // `start` is after `[`. Returns the index after `]`, or -1 when there is no `]`.
-    // The set is in *set_out.
     var set_out = -1;
     fn collection(start: i64) -> i64 {
         var j = start;
@@ -842,7 +773,6 @@ fn vre_compile(pattern: u8[:], ignore: i64, smart: bool) -> bool {
         let s = vre_set_begin(neg);
         if j < n && ch[j] == ']' { vre_set_range(s, ']', ']'); j++; }
         fn add_lit(c: i64) {
-            // A range such as a-z.
             if j + 1 < n && ch[j] == '-' && ch[j + 1] != ']' && ch[j + 1] != '\\' && ch[j + 1] != '[' {
                 let hi = ch[j + 1];
                 if hi < c { vre_invalid(pattern); }
@@ -887,7 +817,6 @@ fn vre_compile(pattern: u8[:], ignore: i64, smart: bool) -> bool {
 
     while i < n && VRE_ERR.len == 0 {
         let c = ch[i];
-        // Characters that are special without a backslash in the current mode.
         if c != '\\' {
             if mode == 0 {
                 if c == '(' { open_group(); i++; continue; }
@@ -931,11 +860,9 @@ fn vre_compile(pattern: u8[:], ignore: i64, smart: bool) -> bool {
             lit(c); i++; at_start = false; continue;
         }
 
-        // A backslash sequence.
         if i + 1 >= n { lit('\\'); i++; continue; }
         let e = ch[i + 1];
         i += 2;
-        // In very magic mode, a backslash makes the special characters literal.
         if mode == 0 && (e == '(' || e == ')' || e == '|' || e == '+' || e == '?' || e == '=' || e == '{' || e == '}' ||
                          e == '<' || e == '>' || e == '@' || e == '%') {
             lit(e); at_start = false; continue;
@@ -1016,7 +943,6 @@ fn vre_compile(pattern: u8[:], ignore: i64, smart: bool) -> bool {
         else if e == 'H' { item(vre_set_node(true, 'A', 'Z', 'a', 'z', '_', '_')); at_start = false; }
         else if e == 'k' || e == 'i' || e == 'f' || e == 'p' { item(vre_class_node('w', false)); at_start = false; }
         else if e == 'K' || e == 'I' || e == 'F' || e == 'P' {
-            // [^\W\d]: a word character that is not a digit.
             let s = vre_set_begin(true);
             vre_set_class(s, 'w', true);
             vre_set_class(s, 'd', false);
@@ -1033,13 +959,11 @@ fn vre_compile(pattern: u8[:], ignore: i64, smart: bool) -> bool {
             else if k == '[' {
                 let next = collection(i);
                 if next >= 0 {
-                    // Add the line break to the collection.
                     vre_set_range(set_out, '\n', '\n');
                     item(vre_add(RK_SET, set_out, 0));
                     i = next;
                 } else { lit('['); }
             } else {
-                // A class or the line break.
                 let s = vre_set_begin(false);
                 vre_set_range(s, '\n', '\n');
                 let lk = vch_lower(k);
@@ -1193,7 +1117,6 @@ fn vre_word_at(lo: i64, hi: i64, i: i64) -> bool { i >= lo && i < hi && vch_word
 
 fn vre_budget() { VRE_STEPS = 0; VRE_OVER = false; }
 
-// One match attempt at `start`, with lo..hi as the whole text.
 fn vre_try(lo: i64, hi: i64, start: i64) -> bool {
     for k in VRE_SLOTS { VRSL[k] = -1; }
     VRBT.clear();
@@ -1255,7 +1178,6 @@ fn vre_try(lo: i64, hi: i64, start: i64) -> bool {
     return false;
 }
 
-// The first match that starts at `from` or later, inside lo..hi.
 fn vre_find(lo: i64, hi: i64, from: i64) -> bool {
     var first = -1;
     if VRP.len > 0 && VRP[0].op == RK_CHAR && !VRE_ICASE { first = VRP[0].x; }
@@ -1272,13 +1194,11 @@ fn vre_find(lo: i64, hi: i64, from: i64) -> bool {
     return false;
 }
 
-// Where the search for the next match starts: after an empty match, one further.
 fn vre_next_pos() -> i64 {
     if VRM_WE > VRM_WS { return VRM_WE; }
     return VRM_WE + 1;
 }
 
-// Appends the text of group k of the last match (0: the match).
 fn vre_group(out: u8[>..]&, k: i64) {
     if k == 0 { vb_str(out, VRM_S, VRM_E); return; }
     let s = VRSL[2 * k];
@@ -1287,9 +1207,7 @@ fn vre_group(out: u8[>..]&, k: i64) {
     vb_str(out, s, e);
 }
 
-// Expands a Vim replacement for the last match.
 fn vre_expand(out: u8[>..]&, tmpl: u8[:], prev: u8[:], has_prev: bool) {
-    // 0 none, 1 upper, 2 lower
     var one = 0;
     var run = 0;
     var piece: u8[>..] = [];
@@ -1335,8 +1253,6 @@ fn vre_expand(out: u8[>..]&, tmpl: u8[:], prev: u8[:], has_prev: bool) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// The engine state, as VimEngine.
 
 let M_NORMAL = 0;
 let M_INSERT = 1;
@@ -1361,7 +1277,6 @@ let ACT_COPY = 3;
 struct VKey { sp: i64, ctrl: bool, ch: i64 }
 
 var VMODE = 0;
-// The command line prefix: ':', '/' or '?'.
 var VPREFIX = ':';
 var VCMD: u8[>..] = [];
 var VCOUNT = -1;
@@ -1371,7 +1286,6 @@ var VAWAIT = 0;
 var VGPRE = false;
 var VREGPRE = false;
 var VREG = 0;
-// The last character of Swift's pendingKeys, for cw.
 var VPLAST = 0;
 var VUN: u8[>..] = [];
 var VUNLW = false;
@@ -1392,7 +1306,6 @@ var VLV_A = 0;
 var VLV_B = 0;
 var VLV_LINE = false;
 var VLV_SET = false;
-// Dot repeat.
 var VREC: VKey[>..] = [];
 var VLASTKEYS: VKey[>..] = [];
 var VREPKEYS: VKey[>..] = [];
@@ -1400,29 +1313,23 @@ var VINS: u8[>..] = [];
 var VLASTINS: u8[>..] = [];
 var VREPLAY = false;
 var VWANT_REPEAT = false;
-// The clipboard text from JavaScript.
 var VCLIPIN: u8[>..] = [];
 
-// The result of one key.
 var VSELLOC = 0;
 var VSELLEN = 0;
 var VMSG: u8[>..] = [];
 var VACTION = 0;
 var VCLIPOUT: u8[>..] = [];
 
-// The edits of one change: code point ranges of the current text, in order.
 struct VEd { lo: i64, hi: i64, ro: i64, rn: i64 }
 var VED: VEd[>..] = [];
 var VEDB: u8[>..] = [];
 
-// Undo history: each record replaces nnew bytes at pos with the nold bytes
-// at the top of the byte stack.
 struct VURec { pos: i64, nold: i64, nnew: i64 }
 var VUR: VURec[>..] = [];
 var VUB: u8[>..] = [];
 var VRR: VURec[>..] = [];
 var VRB: u8[>..] = [];
-// The text after the last committed change.
 var VLAST: u8[>..] = [];
 var VHAVELAST = false;
 
@@ -1447,7 +1354,6 @@ fn vm_sel(loc: i64, len: i64) {
     VSELLEN = max(0, min(len, VCH.len - VSELLOC));
 }
 
-// A block cursor covers one character in Normal mode.
 fn vm_sel_block(i0: i64) {
     let i = max(0, min(i0, VCH.len));
     var len = 0;
@@ -1460,7 +1366,6 @@ fn ed_add(lo: i64, hi: i64, rep: u8[:]) {
     VEDB.append(rep);
 }
 
-// Applies VED to the text. Returns the new place of the old position `at`.
 fn ed_apply(at: i64) -> i64 {
     var nb: u8[>..] = [];
     var prev = 0;
@@ -1491,8 +1396,6 @@ fn vm_edit1(lo: i64, hi: i64, rep: u8[:]) {
     ed_apply(0);
 }
 
-// ---------------------------------------------------------------------------
-// Undo
 
 fn vm_commit() {
     var same = VHAVELAST && VLAST.len == VTXT.len;
@@ -1516,7 +1419,6 @@ fn vm_commit() {
     VHAVELAST = true;
 }
 
-// Puts `old` at pos in place of nnew bytes.
 fn vm_undo_text(pos: i64, nnew: i64, old: u8[:]) {
     var nb: u8[>..] = [];
     nb.append(VTXT[..pos]);
@@ -1558,8 +1460,6 @@ fn vm_undo(n: i64, redo: bool) {
     if pos >= 0 { vm_sel_block(vb_clamp(vb_char_at(pos))); }
 }
 
-// ---------------------------------------------------------------------------
-// Motions
 
 struct VMo { ok: bool, t: i64, incl: bool, lw: bool, vert: bool, msg: bool, srch: bool }
 
@@ -1662,7 +1562,6 @@ fn vb_motion(c: i64, i: i64, n: i64, desired: i64) -> VMo {
         if !ok { return vmo_msg(i, "No word under the cursor."); }
         var word: u8[>..] = [];
         vb_str(word, s, e);
-        // A whole-word Vim pattern, case as typed.
         var pat: u8[>..] = [];
         pat.append("\\<");
         vb_escape_vim(pat, word);
@@ -1681,8 +1580,6 @@ fn vb_motion(c: i64, i: i64, n: i64, desired: i64) -> VMo {
     return none;
 }
 
-// ---------------------------------------------------------------------------
-// Normal mode
 
 fn vm_set_desired(vert: bool, cursor: i64) {
     if vert { if VDESCOL < 0 { VDESCOL = vb_col(cursor); } } else { VDESCOL = -1; }
@@ -1710,7 +1607,6 @@ fn vm_motion_result(target: i64, incl: bool, lw: bool, cursor: i64) {
     var hi = 0;
     if lw { lo = vb_ls(a); hi = vb_leb(b); }
     else { var x = 0; if incl { x = 1; } hi = min(VCH.len, b + x); }
-    // cw acts like ce on a word.
     if VOP == 'c' && (VPLAST == 'w' || VPLAST == 'W') && lo < VCH.len {
         var end = hi;
         while end > lo + 1 && vb_white(VCH[end - 1]) { end--; }
@@ -1752,7 +1648,6 @@ fn vm_apply_op(op: i64, lo0: i64, hi0: i64, lw: bool, cursor: i64) {
     }
     if op == 'd' {
         vm_store(t, lw, reg);
-        // Deleting the last lines also removes the line break before them.
         if lw && hi == VCH.len && lo > 0 && !has_suffix(t, "\n") { lo--; }
         vm_finish_change();
         let after = lo;
@@ -1766,7 +1661,6 @@ fn vm_apply_op(op: i64, lo0: i64, hi0: i64, lw: bool, cursor: i64) {
         vm_store(t, lw, reg);
         var rep: u8[>..] = [];
         if lw {
-            // Keep the line break and the indentation.
             vb_indent(rep, lo);
             if has_suffix(t, "\n") { hi--; }
         }
@@ -1909,7 +1803,6 @@ fn vm_repeat(cursor: i64) {
         vm_sel_block(max(vb_ls(c), c - 1));
     }
     VREPLAY = false;
-    // Swift keeps only the edits and the selection of the replayed keys.
     VMSG.clear();
     VACTION = ACT_NONE;
     VCLIPOUT.clear();
@@ -1955,7 +1848,6 @@ fn vm_normal(k: VKey, cursor: i64) {
     let c = k.ch;
     VPLAST = c;
 
-    // A character argument for f, t, r, or a text object.
     if VAWAIT != 0 {
         let aw = VAWAIT;
         VAWAIT = 0;
@@ -2010,16 +1902,13 @@ fn vm_normal(k: VKey, cursor: i64) {
         return;
     }
 
-    // Counts.
     if vch_digit(c) && !(c == '0' && VCOUNT < 0) {
         VCOUNT = max(VCOUNT, 0) * 10 + (c - '0');
         return;
     }
 
-    // Operators.
     if VOP != 0 {
         if c == VOP {
-            // dd, cc, yy, >>, <<: whole lines.
             let n = vm_opcnt1() * vm_cnt1();
             let start = vb_ls(cursor);
             let last_line = vb_move_lines(cursor, n - 1, -1);
@@ -2077,7 +1966,6 @@ fn vm_normal(k: VKey, cursor: i64) {
         return;
     }
 
-    // Commands without a motion.
     if VOP != 0 { vm_clear_pending(); VREC.clear(); return; }
     let n = vm_cnt1();
     if c == 'i' { vm_enter_insert(cursor); return; }
@@ -2182,8 +2070,6 @@ fn vm_normal(k: VKey, cursor: i64) {
     VREC.clear();
 }
 
-// ---------------------------------------------------------------------------
-// Visual mode
 
 fn vm_visual_sel(cursor: i64) {
     let a = min(VANCHOR, cursor);
@@ -2201,7 +2087,6 @@ fn vm_visual_sel(cursor: i64) {
 fn vm_visual_cursor() -> i64 {
     let start = VSELLOC;
     let end = VSELLOC + VSELLEN;
-    // The cursor is the end away from the anchor.
     if VMODE == M_VLINE {
         if start == vb_ls(VANCHOR) || start < VANCHOR {
             if start < VANCHOR { return start; }
@@ -2366,8 +2251,6 @@ fn vm_visual(k: VKey, cursor: i64) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// The command line and the Ex commands
 
 fn vm_cmdline(k: VKey, cursor: i64) {
     if k.sp == SP_ESC || (k.ctrl && k.ch == 'c') {
@@ -2411,7 +2294,6 @@ fn vm_cmdline(k: VKey, cursor: i64) {
 
 fn vm_is_alnum_cp(c: i64) -> bool { vch_letter(c) || vch_digit(c) }
 
-// The text after a command name (substitute or s), or false.
 fn vm_sub_arg(t: u8[:]) -> u8[:], bool {
     if has_prefix(t, "substitute") { return t[10..], true; }
     if has_prefix(t, "s") { return t[1..], true; }
@@ -2421,9 +2303,6 @@ fn vm_sub_arg(t: u8[:]) -> u8[:], bool {
 var VRANGE_LO = 0;
 var VRANGE_HI = 0;
 
-// Parses an Ex range such as %, .,$, 3,7, '<,'>, .,+2 or /pattern/.
-// Returns the index after the range, whether there is a range, and false on
-// an error (the message is in VMSG).
 fn vm_parse_range(s: u8[:], cursor: i64) -> i64, bool, bool {
     var p = 0;
     let current = vb_line_no(cursor);
@@ -2473,7 +2352,6 @@ fn vm_parse_range(s: u8[:], cursor: i64) -> i64, bool, bool {
             base = vb_line_no(hit);
             has = true;
         }
-        // Offsets: +n, -n, or a bare + or -.
         while p < s.len && (s[p] == '+' || s[p] == '-') {
             let plus = s[p] == '+';
             p++;
@@ -2512,7 +2390,6 @@ fn vm_count_msg(n: i64, one: u8[:], many: u8[:]) {
     VMSG.append(many);
 }
 
-// Deletes the lines in the list (ascending).
 fn vm_delete_lines(lines: i64[:]) {
     if lines.len == 0 { return; }
     var nb: u8[>..] = [];
@@ -2522,7 +2399,6 @@ fn vm_delete_lines(lines: i64[:]) {
     var first = true;
     var start = 0;
     var b = 0;
-    // The parts of the text between line breaks, as components(separatedBy:).
     while b <= VTXT.len {
         if b == VTXT.len || VTXT[b] == '\n' {
             while li < lines.len && lines[li] < line { li++; }
@@ -2546,8 +2422,6 @@ fn vm_delete_lines(lines: i64[:]) {
     vm_count_msg(removed, "1 line deleted.", " lines deleted.");
 }
 
-// Parses spec as /pattern/replacement/flags into the three buffers.
-// Returns false when the spec has fewer than two parts.
 fn vm_sub_parse(spec: u8[:], pat: u8[>..]&, rep: u8[>..]&, flags: u8[>..]&) -> bool {
     let dl = utf8_len(spec[0]);
     var d: u8[..4] = [];
@@ -2586,15 +2460,11 @@ var VSUB_COUNT = 0;
 var VSUB_LINES = 0;
 var VSUB_LAST = 0;
 
-// :s/pattern/replacement/flags on the lines lo..hi. Adds the edits to VED.
-// Returns SUB_DONE with edits, SUB_NONE (nothing to do, VMSG may have a
-// message), or SUB_MSG (only a message: the n flag or an error).
 fn vm_substitute(spec: u8[:], lo: i64, hi: i64) -> i64 {
     var pat: u8[>..] = [];
     var rep: u8[>..] = [];
     var flags: u8[>..] = [];
     if trim_sp(spec).len == 0 {
-        // :s alone repeats the last substitute without its flags.
         if !VLSUB_SET { vm_msg("No previous substitute."); return SUB_MSG; }
         pat.append(VLSUB_PAT);
         rep.append(VLSUB_REP);
@@ -2635,7 +2505,6 @@ fn vm_substitute(spec: u8[:], lo: i64, hi: i64) -> i64 {
     var lines = 0;
     var last_line = lo;
     var seen_line = -1;
-    // The line of position `at`, counted from first_start.
     var line = lo;
     var lpos = first_start;
     let n = VCH.len;
@@ -2694,12 +2563,10 @@ fn vm_sub_run(spec: u8[:], lo: i64, hi: i64) {
     VEDB.clear();
     if vm_substitute(spec, lo, hi) != SUB_DONE { return; }
     let caret = vb_fnb(vb_line_start_of(VSUB_LAST));
-    // Apply the edits, then put the caret on the last changed line.
     let at = ed_apply(caret);
     vm_sel(at, 0);
 }
 
-// :g/pattern/cmd and :v/pattern/cmd. The command is d, s/…/…/, or nothing.
 fn vm_global(spec: u8[:], invert: bool, lo: i64, hi: i64) {
     if spec.len == 0 { vm_msg("Write the command as :g/pattern/command"); return; }
     let dl = min(utf8_len(spec[0]), spec.len);
@@ -2775,7 +2642,6 @@ fn vm_ex(raw: u8[:], cursor: i64) {
         vm_msg("Shell commands are not available in Marklove.");
         return;
     }
-    // Marklove saves each change at once. :w also saves a version in the history.
     if cmd == "w" || cmd == "w!" || cmd == "update" || cmd == "wq" || cmd == "x" || cmd == "wq!" || cmd == "x!" {
         VACTION = ACT_SAVE;
         vm_msg("Saved a version.");
@@ -2791,7 +2657,6 @@ fn vm_ex(raw: u8[:], cursor: i64) {
     if cmd == "$" { vm_sel_block(vb_fnb(vb_line_start_of(vb_line_count() - 1))); return; }
     let num, isnum = parse_int(cmd);
     if isnum { vm_sel_block(vb_fnb(vb_line_start_of(max(0, num - 1)))); return; }
-    // A range, then the command.
     let p, has_range, ok = vm_parse_range(cmd, cursor);
     if !ok { return; }
     let current = vb_line_no(cursor);
@@ -2849,8 +2714,6 @@ fn vm_ex(raw: u8[:], cursor: i64) {
     VMSG.append(cmd);
 }
 
-// ---------------------------------------------------------------------------
-// Entry points
 
 fn vm_handle(k: VKey) {
     let cursor = VSELLOC;
@@ -2867,7 +2730,6 @@ fn vm_handle(k: VKey) {
                 VREC.clear();
             }
             VINS.clear();
-            // The cursor moves one left when leaving Insert mode, as in Vim.
             var c = cursor;
             if c > vb_ls(c) { c--; }
             vm_sel_block(c);
@@ -2879,7 +2741,6 @@ fn vm_handle(k: VKey) {
     vm_normal(k, min(cursor, vb_clamp(cursor)));
 }
 
-// Reads a key name. Returns false for a name that Vim does not use.
 fn vm_parse_key(key: u8[:]) -> VKey, bool {
     var k = VKey { sp: 0, ctrl: false, ch: 0 };
     if key == "Escape" { k.sp = SP_ESC; return k, true; }
@@ -2900,7 +2761,6 @@ fn vm_parse_key(key: u8[:]) -> VKey, bool {
     return k, true;
 }
 
-// Ctrl keys that the engine uses in each mode. The others go to the browser.
 fn vm_ctrl_used(k: VKey) -> bool {
     if VMODE == M_NORMAL { return k.ch == 'r' || k.ch == 'd' || k.ch == 'u' || k.ch == 'f' || k.ch == 'b'; }
     if VMODE == M_CMD { return k.ch == 'c'; }
@@ -2941,7 +2801,6 @@ fn vim_key(out: u8[>..]&, text: u8[:], cursor: i64, sel_start: i64, sel_end: i64
             vm_handle(k);
         } else {
             handled = false;
-            // Swift: noteInserted and noteDeletedBackward, for . repeat.
             if k.sp == 0 && !k.ctrl { vm_put_cp(VINS, k.ch); }
             else if k.sp == SP_ENTER { VINS.push('\n'); }
             else if k.sp == SP_TAB { VINS.push('\t'); }
@@ -3001,13 +2860,7 @@ fn vim_key(out: u8[>..]&, text: u8[:], cursor: i64, sel_start: i64, sel_end: i64
     out.push('}');
 }
 
-// ---------------------------------------------------------------------------
-// Find and Replace with Vim patterns, as FindState with the Vim syntax.
-// Offsets are UTF-8 byte offsets. The output is the same as edit_find and
-// edit_replace. ignore_case is "Match Case" off: then \c, \C and smart case
-// decide, as in Swift.
 
-// The last replacement of Find and Replace, for ~ (FindState.lastReplacement).
 var VFIND_REP: u8[>..] = [];
 var VFIND_REP_SET = false;
 

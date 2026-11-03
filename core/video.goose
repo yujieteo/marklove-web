@@ -1,18 +1,11 @@
-// Video and audio files: the timeline of the slide pages (VideoTimeline),
-// the podcast cues (SubtitleWriter.sequentialCues), and the MP4 container.
-// The browser encodes the frames and the sound (WebCodecs) and keeps the
-// encoded bytes. This file writes the boxes of the container around them.
 
 import layout;
 import narr;
 
-// --- the timeline ----------------------------------------------------------
 
-// A page state on the timeline.
 struct VSeg { page: i64, step: i64, start: f64, dur: f64 }
 var SEGS: VSeg[>..] = [];
 
-// Real sentence lengths in seconds, as "sentence\tseconds" lines.
 var DURATIONS: u8[>..] = [];
 
 fn sentence_seconds(s: u8[:]) -> f64 {
@@ -31,8 +24,6 @@ fn sentence_seconds(s: u8[:]) -> f64 {
     return estimated_seconds(s);
 }
 
-// VideoTimeline.make: the output pages in order. The narration sentences of
-// a frame are shared out across the steps of its pages.
 fn page_timeline() {
     SEGS.clear();
     CUES.clear();
@@ -74,7 +65,6 @@ fn page_timeline() {
     }
 }
 
-// The podcast has no slides: the sentences follow each other.
 fn sequential_cues() {
     CUES.clear();
     var t = 0.3;
@@ -116,10 +106,7 @@ fn timeline_json(out: u8[>..]&) {
     out.append("]}");
 }
 
-// --- MP4 ---------------------------------------------------------------------
 
-// A track: the samples are in the media data in order. sizes and durs are
-// 32-bit little-endian numbers, one for each sample.
 struct Track { sizes: const u8[:], durs: const u8[:], keys: const u8[:], config: const u8[:], scale: i64 }
 
 fn u32_le(b: u8[:], i: i64) -> i64 {
@@ -131,7 +118,6 @@ fn be(out: u8[>..]&, v: i64, n: i64) {
     while k >= 0 { out.push(((v >> (k * 8)) & 255) as u8); k--; }
 }
 
-// Opens a box; mp4_close writes its size.
 fn mp4_open(out: u8[>..]&, kind: const u8[:]) -> i64 {
     let at = out.len;
     be(out, 0, 4);
@@ -165,7 +151,6 @@ fn media_duration(t: Track) -> i64 {
 
 fn stbl(out: u8[>..]&, t: Track, offset: i64) {
     let n = samples(t);
-    // Time to sample: runs of equal durations.
     var a = full(out, "stts", 0, 0);
     let count_at = out.len;
     be(out, 0, 4);
@@ -182,7 +167,6 @@ fn stbl(out: u8[>..]&, t: Track, offset: i64) {
     }
     for k in 4 { out[count_at + k] = ((runs >> ((3 - k) * 8)) & 255) as u8; }
     mp4_close(out, a);
-    // Sync samples, when not all samples are key frames.
     if t.keys.len == n {
         var all = true;
         for k in t.keys { if k == 0 { all = false; } }
@@ -195,7 +179,6 @@ fn stbl(out: u8[>..]&, t: Track, offset: i64) {
             mp4_close(out, a);
         }
     }
-    // One chunk with all the samples.
     a = full(out, "stsc", 0, 0);
     be(out, 1, 4);
     be(out, 1, 4);
@@ -219,12 +202,10 @@ fn stbl(out: u8[>..]&, t: Track, offset: i64) {
     mp4_close(out, a);
 }
 
-// The audio decoder configuration: an MPEG-4 ES descriptor.
 fn esds(out: u8[>..]&, config: u8[:]) {
     let a = full(out, "esds", 0, 0);
     fn desc(tag: i64, n: i64) {
         be(out, tag, 1);
-        // Four bytes of length, as many writers do.
         be(out, 0x80 | ((n >> 21) & 127), 1);
         be(out, 0x80 | ((n >> 14) & 127), 1);
         be(out, 0x80 | ((n >> 7) & 127), 1);
@@ -248,7 +229,6 @@ fn esds(out: u8[>..]&, config: u8[:]) {
     mp4_close(out, a);
 }
 
-// The Opus decoder configuration (dOps), from the OpusHead of the encoder.
 fn dops(out: u8[>..]&, head: u8[:], channels: i64, rate: i64) {
     let a = mp4_open(out, "dOps");
     be(out, 0, 1);
@@ -370,15 +350,11 @@ fn sum_sizes(t: Track) -> i64 {
     return n;
 }
 
-// The start of an MP4 file: ftyp, moov and the media data header. The
-// video samples follow it, then the audio samples.
 fn mp4_head(dst: u8[>..]&, v: Track, a: Track, w: i64, h: i64, codec: i64, rate: i64, channels: i64) {
     let has_video = samples(v) > 0;
     let has_audio = codec != A_NONE && samples(a) > 0;
     let data = sum_sizes(v) + sum_sizes(a);
     let large = data + 16 > 0xFFFFFFFF;
-    // The moov box does not change size with the offsets, except for co64:
-    // write it once to learn its size, then again.
     var out: u8[>..] = [];
     for pass in 2 {
         out.clear();
@@ -407,7 +383,6 @@ fn mp4_head(dst: u8[>..]&, v: Track, a: Track, w: i64, h: i64, codec: i64, rate:
         be(out, 0, 24);
         be(out, 3, 4);
         mp4_close(out, hd);
-        // The size of the moov box is known in the second pass.
         let moov_size = if pass == 0 { 0 } else { MOOV_SIZE };
         let data_at = head + moov_size + (if large { 16 } else { 8 });
         var id = 1;

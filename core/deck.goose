@@ -1,9 +1,3 @@
-// Slide decks, as the app's SlideComposer and TakahashiFormatter.
-//
-// A Normal slide is a group of top-level body events between thematic
-// breaks; the renderer turns the group into elements and counts the reveal
-// steps. A Takahashi slide holds one element: a statement, a block, math,
-// a plot, or a chart.
 
 import sentence;
 
@@ -11,25 +5,24 @@ let SK_TITLE = 0;
 let SK_SECTION = 1;
 let SK_CONTENT = 2;
 
-// Slide content (the `el` of a slide).
-let EL_GROUP = 0;      // top-level events lo..hi
-let EL_STATEMENT = 1;  // inline events lo..hi
-let EL_BLOCK = 2;      // the block event lo
-let EL_MATH = 3;       // display math: LaTeX in S at lo, length hi
-let EL_PLOT = 4;       // the plot division event lo
-let EL_CHART = 5;      // the chart division event lo
+let EL_GROUP = 0;
+let EL_STATEMENT = 1;
+let EL_BLOCK = 2;
+let EL_MATH = 3;
+let EL_PLOT = 4;
+let EL_CHART = 5;
 let EL_NONE = 6;
 
 struct Slide {
     kind: i64,
     frame: i64,
-    num: i64,        // the section number
+    num: i64,
     el: i64,
     lo: i64,
     hi: i64,
-    n: i64,          // 0 for the first slide of a frame; the id suffix is n + 1
-    cont: bool,      // continues the content of the slide before it
-    steps: i64,      // set by the renderer
+    n: i64,
+    cont: bool,
+    steps: i64,
     s0: i64,
     s1: i64,
 }
@@ -37,21 +30,17 @@ struct Slide {
 var SL: Slide[>..] = [];
 var TAKAHASHI = false;
 
-// Takahashi warnings: kind 1 overlong sentence (n = words), 2 out of
-// profile (name in a), with the source range.
 struct TWarn { kind: i64, n: i64, a: const u8[:], s0: i64, s1: i64 }
 var TW: TWarn[>..] = [];
 
 let TK_MAX_WORDS = 12;
 let TK_MAX_CHARS = 90;
 
-// True when the event belongs in slides (or in the article, with `article`).
 fn in_scope(e: Ev, article: bool) -> bool {
     if article { return e.scope != SC_SLIDES; }
     return e.scope != SC_ARTICLE;
 }
 
-// Notes, narration, public notes, and explanations are not body content.
 fn is_extracted(e: Ev) -> bool {
     e.k == K_DIV && (e.n == D_NOTES || e.n == D_NARRATION || e.n == D_PUBLIC || e.n == D_EXPLAIN)
 }
@@ -62,7 +51,6 @@ fn add_slide(kind: i64, fi: i64, num: i64, el: i64, lo: i64, hi: i64, n: i64, co
     SL.push(Slide { kind: kind, frame: fi, num: num, el: el, lo: lo, hi: hi, n: n, cont: cont, steps: 1, s0: s0, s1: s1 });
 }
 
-// --- Normal slides -----------------------------------------------------
 
 fn normal_slides() {
     SL.clear();
@@ -70,7 +58,6 @@ fn normal_slides() {
     var section = 0;
     for f, fi in FR {
         if f.scope == SC_ARTICLE { continue; }
-        // Groups between thematic breaks, without empty groups.
         var glo: i64[>..] = [];
         var ghi: i64[>..] = [];
         var cur = -1;
@@ -106,7 +93,6 @@ fn normal_slides() {
     }
 }
 
-// --- Takahashi slides --------------------------------------------------
 
 var TK_FRAME = 0;
 var TK_N = 0;
@@ -123,8 +109,6 @@ fn tk_statement_text(t: u8[:], s0: i64, s1: i64, cont: bool) {
     tk_add(EL_STATEMENT, lo, hi, s0, s1, cont);
 }
 
-// The display equations in a block, for equation steps: display math, or
-// the inline math at the top level of a paragraph.
 fn each_equation<F>(b: i64) {
     let e = EV[b];
     if e.k == K_MATH { F(e.a); return; }
@@ -137,8 +121,6 @@ fn each_equation<F>(b: i64) {
     }
 }
 
-// Sentence groups of a paragraph's source: ranges into STX, which holds the
-// paragraph source. fl = 1 for an overlong group.
 struct Group { s: i64, e: i64, over: bool }
 var GROUPS: Group[>..] = [];
 
@@ -190,7 +172,6 @@ fn sentence_groups(source: u8[:]) {
 fn tk_prose(b: i64) {
     let e = EV[b];
     sentence_groups(SRC[e.s0..e.s1]);
-    // The groups are ranges into STX, which the statements below replace.
     var gs: Group[>..] = [];
     gs.append(GROUPS);
     var text: u8[>..] = [];
@@ -283,7 +264,6 @@ recursive fn tk_blocks(lo: i64, hi: i64) {
     }
 }
 
-// The first table at the top level of a division, or -1.
 fn div_table(d: i64) -> i64 {
     var j = d + 1;
     while j < EV[d].end - 1 {
@@ -322,8 +302,6 @@ fn build_deck(takahashi: bool) {
     if takahashi { takahashi_slides(); } else { normal_slides(); }
 }
 
-// The revised Markdown copy: top-level slide paragraphs split into one
-// paragraph per Takahashi slide. All other text stays byte for byte.
 fn revised_markdown(out: u8[>..]&) {
     var cursor = 0;
     for f in FR {

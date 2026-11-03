@@ -1,8 +1,3 @@
-// HTML for slides and the article, as the app's HTMLWriter, HTMLExporter
-// and ArticleExporter.
-//
-// The renderer writes into `H`. It also composes slide elements as it goes:
-// a pause adds a reveal step, and each element gets the current step.
 
 import deck;
 import texmath;
@@ -13,17 +8,12 @@ import pack;
 
 var H: u8[>..] = [];
 var STEP = 0;
-// Article mode: article scope, and no reveal steps.
 var ART = false;
-// XHTML for EPUB: closed empty elements and no scripted controls.
 var XHTML = false;
 var FIGS = 0;
-// The label of the first element of a slide.
 var LABEL: u8[>..] = [];
 var DEPTH = 0;
 
-// Assets: "path\tsource\n" lines from JavaScript. The source is a data URL
-// or a blob URL. With LINK_PREFIX, media are links (for EPUB) instead.
 var ASSETS: u8[>..] = [];
 struct Asset { k: Line, v: Line }
 var AS: Asset[>..] = [];
@@ -58,19 +48,16 @@ fn asset_index(path: u8[:]) -> i64 {
 
 fn url_path_allowed(c: u8) -> bool { is_alnum(c) || contains_byte("-._~!$&'()*+,;=:@/", c) }
 
-// "%XX" with upper-case hex digits, as Foundation's percent encoding.
 fn pct_byte(out: u8[>..]&, c: u8) {
     out.push('%');
     out.push("0123456789ABCDEF"[(c >> 4) as i64]);
     out.push("0123456789ABCDEF"[(c & 15) as i64]);
 }
 
-// Writes the source of an asset: a link for EPUB, or the given URL.
 fn asset_source(i: i64) {
     let a = AS[i];
     if LINK_PREFIX.len > 0 {
         let p = ASSETS[a.k.s..a.k.e];
-        // Remember the path once, for the EPUB manifest.
         var seen = false;
         var j = 0;
         while j < LINKED.len {
@@ -113,7 +100,6 @@ fn safe_url(url: u8[:]) -> bool {
 
 fn math(latex: u8[:], display: bool) { math_html(H, latex, display); }
 
-// --- inlines -------------------------------------------------------------
 
 fn r_inline(lo: i64, hi: i64) {
     var i = lo;
@@ -163,7 +149,6 @@ fn r_inline(lo: i64, hi: i64) {
     }
 }
 
-// Inline Markdown text that is not in the source, such as a box title.
 fn r_inline_text(t: u8[:]) {
     let mark = EV.len;
     let lo, hi = inline_text(t);
@@ -175,7 +160,6 @@ fn capitalized(out: u8[>..]&, s: u8[:]) {
     for c, i in s { out.push(if i == 0 { upper(c) } else { lower(c) }); }
 }
 
-// --- blocks --------------------------------------------------------------
 
 fn r_table(t: i64) {
     H.append("<table><thead><tr>");
@@ -251,7 +235,6 @@ fn r_figure(i: i64, step: i64) {
         esc(H, desc);
         H.append("</div>");
     }
-    // The media markup goes inside the figure element.
     var media: u8[>..] = [];
     media.append(H[m..]);
     H.resize(m);
@@ -352,9 +335,7 @@ recursive fn r_block(i: i64, step: i64) {
     }
 }
 
-// --- charts --------------------------------------------------------------
 
-// A bar chart from the first table of a `::: chart` division.
 var CH_LABELS: Line[>..] = [];
 var CH_NAMES: Line[>..] = [];
 var CH_VALUES: f64[>..] = [];
@@ -385,7 +366,6 @@ fn chart_spec(d: i64) {
     if t < 0 { return; }
     let kind = trim_sp(sp_text(EV[d].a));
     if kind.len > 0 && !eq_nocase(kind, "bar") { CH_ERRORS.append("Marklove makes bar charts only. It shows this chart as a bar chart.\n"); }
-    // Cells by row, as text.
     var cells: Line[>..] = [];
     var row_start: i64[>..] = [];
     var header: Line[>..] = [];
@@ -435,7 +415,6 @@ fn chart_spec(d: i64) {
             }
         }
     }
-    // Duplicate and empty labels.
     var dup = false;
     var empty = false;
     for l, i in CH_LABELS {
@@ -542,14 +521,12 @@ fn r_chart(d: i64, step: i64) {
     H.append("</details></div>");
 }
 
-// --- elements --------------------------------------------------------------
 
 fn r_plot(d: i64, step: i64) {
     var s: u8[>..] = [];
     step_attr(s, step);
     let mark = H.len;
     plot_html(H, sp_text(EV[d].c), s, "");
-    // EPUB readers do not run scripts: the plot is a picture without sliders.
     if XHTML {
         let c = index_of(H, "<div class=\"controls\">", mark);
         if c >= 0 { H.resize(c); H.append("</div>"); }
@@ -558,7 +535,6 @@ fn r_plot(d: i64, step: i64) {
 
 fn set_label(t: u8[:]) {
     if DEPTH > 0 || LABEL.len > 0 { return; }
-    // At most 60 characters.
     var n = 0;
     for c in t {
         if (c & 0xC0) != 0x80 { n++; if n > 60 { break; } }
@@ -578,7 +554,6 @@ fn label_block(i: i64) {
     set_label(t);
 }
 
-// Equation steps: display equations that replace each other.
 fn r_eqsteps(d: i64) -> i64 {
     var count = 0;
     let at = STEP;
@@ -604,7 +579,6 @@ fn r_eqsteps(d: i64) -> i64 {
     return max(count, 1);
 }
 
-// Converts and writes the top-level events lo..hi as slide or article elements.
 recursive fn r_elements(lo: i64, hi: i64) {
     var i = lo;
     while i < hi {
@@ -686,7 +660,6 @@ recursive fn r_elements(lo: i64, hi: i64) {
         } else if d == D_CHART && div_table(i) >= 0 {
             r_chart(i, start);
         } else {
-            // A column outside columns, a chart without a table, or an unknown name.
             H.append("<div");
             hs(start);
             H.push('>');
@@ -699,14 +672,12 @@ recursive fn r_elements(lo: i64, hi: i64) {
     }
 }
 
-// --- slides --------------------------------------------------------------
 
 fn slide_id(out: u8[>..]&, s: Slide) {
     out.append(sp_text(FR[s.frame].id));
     if s.n > 0 { format(out, "-", s.n + 1); }
 }
 
-// The slide content: elements for Normal, one element for Takahashi.
 fn r_slide_content(s: Slide) {
     STEP = 0;
     if s.el == EL_GROUP { r_elements(s.lo, s.hi); }
@@ -743,7 +714,6 @@ fn byline(out: u8[>..]&, sep: u8[:]) -> bool {
     return n > 0;
 }
 
-// The text of a frame's notes or public notes (kind D_NOTES or D_PUBLIC).
 fn notes_text(out: u8[>..]&, fi: i64, kind: i64) { frame_raw(out, FR[fi], kind); }
 
 var INCLUDE_NARRATION = true;
@@ -754,7 +724,6 @@ fn r_slide(si: i64, total: i64) {
     let f = FR[s.frame];
     LABEL.clear();
     DEPTH = 0;
-    // The content first: it gives the step count and the label.
     let mark = H.len;
     r_slide_content(s);
     var content: u8[>..] = [];
@@ -762,8 +731,6 @@ fn r_slide(si: i64, total: i64) {
     H.resize(mark);
     SL[si].steps = STEP + 1;
     var label: u8[>..] = [];
-    // As Swift: the title slide's title is the "title" key, else none (the
-    // title frame has no heading). Takahashi's h1 then shows doc.title.
     if s.kind == SK_TITLE { if has_meta("title") { label.append(meta("title")); } }
     else if (s.kind == SK_SECTION || s.n == 0) && f.title.n > 0 && !(TAKAHASHI && s.kind == SK_CONTENT) { label.append(sp_text(f.title)); }
     if label.len == 0 { label.append(if LABEL.len > 0 { LABEL } else { "Slide" }); }
@@ -795,7 +762,6 @@ fn r_slide(si: i64, total: i64) {
     }
     H.append(content);
     H.append("</div>");
-    // Public notes and narration text, on the first slide of the frame.
     var pub: u8[>..] = [];
     if INCLUDE_PUBLIC_NOTES && s.n == 0 { notes_text(pub, s.frame, D_PUBLIC); }
     let has_narr = INCLUDE_NARRATION && s.n == 0 && narr_has_frame(s.frame);
@@ -823,28 +789,23 @@ fn r_slide(si: i64, total: i64) {
     H.append("</section>\n");
 }
 
-// Writes all slides of the current deck.
 fn r_slides() {
     FIGS = 0;
     plot_reset();
     for i in SL.len { r_slide(i, SL.len); }
 }
 
-// --- pages ----------------------------------------------------------------
 
-// Page parts that JavaScript supplies: fonts, style sheets, the runtime.
 var PART_FONTS: u8[>..] = [];
 var PART_STYLE: u8[>..] = [];
 var PART_THEME: u8[>..] = [];
 var PART_RUNTIME: u8[>..] = [];
-// "dark", "light", or empty to follow the reader's setting.
 var FIXED_THEME: u8[>..] = [];
 
 fn theme_attr() {
     if FIXED_THEME.len > 0 { H.append(" data-theme=\""); H.append(FIXED_THEME); H.push('"'); }
 }
 
-// The interactive presentation: one HTML file that works offline.
 fn interactive_page(takahashi: bool) {
     build_deck(takahashi);
     narration_script();
@@ -875,7 +836,6 @@ fn interactive_page(takahashi: bool) {
     H.append("</script>\n</body>\n</html>\n");
 }
 
-// --- the article ---------------------------------------------------------
 
 struct Heading { level: i64, ev: i64, frame: i64, text: Line, id: Line }
 var HEADS: Heading[>..] = [];
@@ -883,10 +843,6 @@ var HTEXT: u8[>..] = [];
 
 fn h_text(l: Line) -> u8[:] { HTEXT[l.s..l.e] }
 
-// The article slug, as Swift's ArticleExporter.slug: the lowercased text,
-// letters and digits of any script, other runs as one "-", "s-" in front.
-// Swift works on Characters: combining marks, variation selectors, emoji
-// modifiers and joined emoji stay with the character before them.
 fn article_slug(out: u8[>..]&, t: u8[:]) {
     let start = out.len;
     out.append("s-");
@@ -895,7 +851,6 @@ fn article_slug(out: u8[>..]&, t: u8[:]) {
     var i = 0;
     while i < t.len {
         let cp, n = uni_decode(t, i);
-        // The whole Character: the base and what extends it.
         var j = i + n;
         var joined = false;
         while j < t.len {
@@ -926,7 +881,6 @@ fn article_headings() {
         let b = HTEXT.len;
         var tmp: u8[>..] = [];
         article_slug(tmp, h_text(text));
-        // As Swift: the count of earlier headings with the same slug.
         var n = 0;
         for h in HEADS {
             var other: u8[>..] = [];
@@ -973,7 +927,6 @@ fn article_heading(h: Heading) {
     format(H, "</", tag, ">\n");
 }
 
-// The article as a web page.
 fn article_page(toc: bool) {
     H.clear();
     XHTML = false;
@@ -1025,8 +978,6 @@ fn article_page(toc: bool) {
     ART = false;
 }
 
-// The article Markdown export: the article prose and relative asset
-// references, without presentation structure and private material.
 fn yaml_quote(out: u8[>..]&, s: u8[:]) {
     if contains_byte(s, ':') || contains_byte(s, '#') || has_prefix(s, "\"") || has_prefix(s, "'") {
         out.push('"');
@@ -1101,9 +1052,7 @@ fn article_markdown(out: u8[>..]&) {
     out.push('\n');
 }
 
-// --- EPUB ------------------------------------------------------------------
 
-// Replaces each `from` in H[mark..] with `to`.
 fn h_replace(mark: i64, from: u8[:], to: u8[:]) {
     var tmp: u8[>..] = [];
     format_replaced(tmp, H[mark..], from, to);
@@ -1111,7 +1060,6 @@ fn h_replace(mark: i64, from: u8[:], to: u8[:]) {
     H.append(tmp);
 }
 
-// MathML and SVG need their namespaces in XHTML.
 fn xml_namespaces(mark: i64) {
     h_replace(mark, "<math ", "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" ");
     h_replace(mark, "<math>", "<math xmlns=\"http://www.w3.org/1998/Math/MathML\">");
@@ -1131,7 +1079,6 @@ fn xhtml_head(out: u8[>..]&, title: u8[:], css: u8[:]) {
 }
 
 fn iso_date(out: u8[>..]&, unix: i64) {
-    // Days since 1970-01-01 to a civil date (Howard Hinnant's algorithm).
     let days = unix / 86400;
     let secs = unix % 86400;
     let z = days + 719468;
@@ -1172,9 +1119,6 @@ fn mime_type(path: u8[:]) -> const u8[:] {
     return "application/octet-stream";
 }
 
-// Starts an EPUB 3 book in the ZIP builder: every text file. JavaScript then
-// adds the media files that `LINKED` lists, under "OEBPS/media/", and
-// finishes the ZIP. Each `#` section is a chapter.
 fn epub_begin(date: i64) {
     ART = true;
     XHTML = true;
@@ -1184,8 +1128,6 @@ fn epub_begin(date: i64) {
     FIGS = 0;
     plot_reset();
     article_headings();
-    // Chapters: the start, then one for each section. Each chapter is a
-    // range of frames; the heading of a section frame starts a chapter.
     var ch_first: i64[>..] = [0];
     for f, fi in FR {
         if f.scope == SC_SLIDES { continue; }
@@ -1220,9 +1162,7 @@ fn epub_begin(date: i64) {
         page_end.push(pages.len);
     }
     let nch = page_end.len;
-    // The identifier: a name-based UUID from the title and byline.
     var idsrc: u8[>..] = [];
-    // As Swift: title + "\n" + the byline joined with "\n" (the "\n" stays when the byline is empty).
     idsrc.append(doc_title());
     idsrc.push('\n');
     var nb = 0;
@@ -1287,7 +1227,6 @@ fn epub_begin(date: i64) {
     opf.append("</manifest>\n<spine>\n");
     for i in nch { format(opf, "<itemref idref=\"c", i, "\"/>\n"); }
     opf.append("</spine>\n</package>\n");
-    // The table of contents: chapters, with the ## headings inside them.
     var nav: u8[>..] = [];
     xhtml_head(nav, "Contents", "style.css");
     nav.append("<body><nav epub:type=\"toc\" id=\"toc\"><h1>Contents</h1><ol>");

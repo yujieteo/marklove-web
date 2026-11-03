@@ -1,18 +1,9 @@
-// Sentences and words, as the app's SentenceSplitter and the word chunks of
-// TakahashiFormatter. "e.g.", "i.e.", "Fig. 2", "3.5", and initials stay
-// inside one sentence. Inline math, code spans, and link destinations are
-// protected: no boundary falls inside them, and each counts as one word.
-//
-// The functions work on the text in `STX` and give byte ranges into it.
 
 import parse;
 
 var STX: u8[>..] = [];
-// Protected regions and sentence ranges, as byte ranges into STX.
 var PROT: Line[>..] = [];
 var SENT: Line[>..] = [];
-// Words of `st_tokens`, as ranges into STX. A token that holds a protected
-// region keeps it whole.
 var WTOK: Line[>..] = [];
 
 fn st_find(s: u8[:], needle: u8[:], from: i64) -> i64 {
@@ -69,7 +60,6 @@ fn protect_in(s: u8[:], prot: Line[>..]&) {
     }
 }
 
-// The length of a closing quote, bracket, or emphasis mark at i, or 0.
 fn st_closer(i: i64) -> i64 {
     let s = STX;
     let c = s[i];
@@ -105,7 +95,6 @@ fn st_ranges() {
         }
         if j >= s.len { break; }
         if !is_ws(s[j]) { i = j; continue; }
-        // The last word before the mark, without opening marks, in lower case.
         var we = i;
         while we > start && is_ws(s[we - 1]) { we--; }
         var ws = we;
@@ -131,7 +120,6 @@ fn st_ranges() {
     if start < s.len && trim_all(s[start..]).len > 0 { SENT.push(Line { start, s.len }); }
 }
 
-// Splits Markdown source text into sentence ranges (into STX).
 fn split_markdown(t: u8[:]) {
     STX.clear();
     STX.append(t);
@@ -139,7 +127,6 @@ fn split_markdown(t: u8[:]) {
     st_ranges();
 }
 
-// Collapses white space to single spaces, into out.
 fn collapse_ws(out: u8[>..]&, t: u8[:]) {
     var i = 0;
     var first = true;
@@ -152,8 +139,6 @@ fn collapse_ws(out: u8[>..]&, t: u8[:]) {
     }
 }
 
-// Splits plain text into trimmed sentences: ranges into STX, which holds
-// the text with white space collapsed.
 fn split_plain(t: u8[:]) {
     STX.clear();
     collapse_ws(STX, t);
@@ -163,7 +148,6 @@ fn split_plain(t: u8[:]) {
     for r in SENT {
         let a = trim_sp(STX[r.s..r.e]);
         if a.len == 0 { continue; }
-        // The offset of the trimmed text in STX.
         var o = r.s;
         while o < r.e && (STX[o] == ' ' || STX[o] == '\t') { o++; }
         SENT[k] = Line { o, o + a.len };
@@ -173,7 +157,6 @@ fn split_plain(t: u8[:]) {
 }
 
 fn has_word_char(t: u8[:]) -> bool {
-    // As Swift's isLetter || isNumber.
     var i = 0;
     while i < t.len {
         let cp, n = uni_decode(t, i);
@@ -183,7 +166,6 @@ fn has_word_char(t: u8[:]) -> bool {
     return false;
 }
 
-// Counts words in Markdown text. Inline math and code count as one word each.
 var WPROT: Line[>..] = [];
 
 fn word_count(t: u8[:]) -> i64 {
@@ -199,7 +181,6 @@ fn word_count(t: u8[:]) -> i64 {
             wa = -1;
             if i == t.len { break; }
             if at_prot {
-                // A protected region is " W ": one word on its own.
                 n++;
                 i = WPROT[p].e;
                 p++;
@@ -224,10 +205,8 @@ fn space_words(t: u8[:]) -> i64 {
     return n;
 }
 
-// Estimated speaking time for a sentence when there is no audio.
 fn estimated_seconds(t: u8[:]) -> f64 { max(0.8, (space_words(t) as f64) * 60.0 / WORDS_PER_MINUTE) }
 
-// Splits STX at white space outside protected regions, into WTOK.
 fn st_tokens() {
     WTOK.clear();
     protect_in(STX, PROT);
@@ -287,9 +266,6 @@ fn break_cost(i: i64) -> f64 {
     return 14.0;
 }
 
-// Splits an overlong sentence (in STX) into parts that fit the profile.
-// Appends the cut positions (word indexes into WTOK, each the end of a
-// part) to cuts.
 fn word_chunks(cuts: i64[>..]&, size: i64, max_chars: i64) {
     st_tokens();
     let n = WTOK.len;
@@ -327,7 +303,6 @@ fn word_chunks(cuts: i64[>..]&, size: i64, max_chars: i64) {
     }
     let base = cuts.len;
     if best[n] >= INF {
-        // A single word longer than the limit: one word for each part.
         for k in n { cuts.push(k + 1); }
         return;
     }

@@ -1,18 +1,7 @@
-// Laid-out pages as SVG (PageRenderer and GraphicsRenderer). The browser
-// draws these pages for PNG images, video frames and print (PDF). For the
-// SVG export, the boxes that are not simple shapes are drawn alone at a
-// high resolution and traced (trace.goose), as SlideImageExporter does.
-//
-// The text uses the line breaks of layout.goose, and each piece of a line
-// has its own x position, so that the browser does not break lines again.
-// Equations are MathML in a foreignObject. Images are "asset:N" links that
-// JavaScript replaces with data: URLs, and the style sheet has a
-// "/*ml-fonts*/" mark for the @font-face rules.
 
 import layout;
 import plot;
 
-// The palette colors, in the order of TPal from bg to violet.
 var PC: TC[>..] = [];
 
 fn set_palette(p: TPal) {
@@ -24,7 +13,6 @@ fn set_palette(p: TPal) {
 
 fn pc(i: i64) -> TC { if i < PC.len { PC[i] } else { TC { 0.5, 0.5, 0.5 } } }
 
-// The handout draws images in gray.
 var GRAY = false;
 
 fn role_color(role: i64) -> TC {
@@ -59,7 +47,6 @@ fn role_color(role: i64) -> TC {
 
 fn col(out: u8[>..]&, role: i64) { th_hex(out, role_color(role)); }
 
-// RasterTracer.num: at most one decimal place.
 fn num(out: u8[>..]&, v: f64) {
     let r = round(v * 10.0) / 10.0;
     if r == round(r) { format(out, r as! i64); return; }
@@ -85,7 +72,6 @@ let STEP_ALL = 1 << 40;
 
 fn visible(b: Box, step: i64) -> bool { b.first <= step && (b.last < 0 || step <= b.last) }
 
-// --- text ---------------------------------------------------------------------
 
 fn font_attrs(out: u8[>..]&, fam: i64, size: f64, bold: bool, italic: bool) {
     out.append(" font-family='");
@@ -96,8 +82,6 @@ fn font_attrs(out: u8[>..]&, fam: i64, size: f64, bold: bool, italic: bool) {
     if italic { out.append(" font-style=\"italic\""); }
 }
 
-// The style of the equations. layout.goose measures them in the same box
-// (see web/pages.js), so that the baseline is in the same place.
 fn math_div(out: u8[>..]&, latex: u8[:], display: bool, size: f64, color: TC) {
     out.append("<div xmlns=\"http://www.w3.org/1999/xhtml\" style=\"font-family:KpMath,math;line-height:0;white-space:nowrap;width:max-content;font-size:");
     num(out, size);
@@ -106,7 +90,6 @@ fn math_div(out: u8[>..]&, latex: u8[:], display: bool, size: f64, color: TC) {
     out.append("\">");
     let at = out.len;
     math_html(out, latex, display);
-    // The math element needs its namespace outside HTML.
     let m = index_of(out, "<math", at);
     if m >= 0 && index_of(out, "xmlns", m) < 0 {
         var rest: u8[>..] = [];
@@ -133,7 +116,6 @@ fn is_link_target(t: u8[:]) -> bool {
     return has_prefix(s, "http://") || has_prefix(s, "https://") || has_prefix(s, "mailto:") || has_prefix(s, "tel:") || has_prefix(s, "www.");
 }
 
-// PageRenderer.drawText: a paragraph in a frame.
 fn draw_text(out: u8[>..]&, ti: i64, x: f64, y: f64, w: f64) {
     break_lines(ti, w);
     let t = TXTS[ti];
@@ -214,7 +196,6 @@ fn draw_text(out: u8[>..]&, ti: i64, x: f64, y: f64, w: f64) {
     }
 }
 
-// A label of the graphics: one line of plain text in a frame.
 fn label(out: u8[>..]&, s: u8[:], x: f64, y: f64, w: f64, size: f64, color: i64, align: i64, bold: bool) {
     let ti = plain_txt(s, FA_BODY, size);
     set_txt(ti, FA_BODY, bold, false, color, align);
@@ -222,7 +203,6 @@ fn label(out: u8[>..]&, s: u8[:], x: f64, y: f64, w: f64, size: f64, color: i64,
     draw_text(out, ti, x, y, w);
 }
 
-// --- plots and charts (GraphicsRenderer) ---------------------------------------
 
 fn plot_svg(out: u8[>..]&, d: i64, fs: f64, rx: f64, ry: f64, rw: f64, rh: f64, progress: f64) {
     pl_parse(sp_text(EV[d].c));
@@ -236,7 +216,6 @@ fn plot_svg(out: u8[>..]&, d: i64, fs: f64, rx: f64, ry: f64, rw: f64, rh: f64, 
     let x1 = PX1;
     fn sx(x: f64) -> f64 { px + (x - x0) / max(x1 - x0, 1e-12) * pw }
     fn sy(y: f64) -> f64 { ptop + ph - (y - y0) / max(y1 - y0, 1e-12) * ph }
-    // Axes through zero, or at the edges.
     let zy = sy(min(max(0.0, y0), y1));
     let zx = sx(min(max(0.0, x0), x1));
     out.append("<path d=\"M");
@@ -245,7 +224,6 @@ fn plot_svg(out: u8[>..]&, d: i64, fs: f64, rx: f64, ry: f64, rw: f64, rh: f64, 
     out.append("\" fill=\"none\" stroke=\"");
     col(out, CR_DIM);
     out.append("\" stroke-width=\"1.25\"/>\n");
-    // Curves, clipped to the plot.
     out.append("<svg overflow=\"hidden\"");
     rect_attrs(out, px - 2.0, ptop - 2.0, pw + 4.0, ph + 4.0);
     out.append(" viewBox=\"");
@@ -273,7 +251,6 @@ fn plot_svg(out: u8[>..]&, d: i64, fs: f64, rx: f64, ry: f64, rw: f64, rh: f64, 
         out.append("\"/>");
     }
     out.append("</svg>\n");
-    // Labels.
     var t: u8[>..] = [];
     let bottom = ry + rh - label_h;
     pl_fmt(t, x0);
@@ -333,7 +310,6 @@ fn chart_svg(out: u8[>..]&, d: i64, fs: f64, rx: f64, ry: f64, rw: f64, rh: f64,
             out.append(" fill=\"");
             col(out, CR_SERIES + k);
             out.append("\"/>\n");
-            // The value above the bar, so that color is not the only signal.
             t.clear();
             pl_fmt(t, ch_value(k, g));
             label(out, t, x - 20.0, top - 2.0 - label_h, bw * 0.92 + 40.0, fs * 0.85, CR_TEXT, AL_CENTER, false);
@@ -363,7 +339,6 @@ fn chart_svg(out: u8[>..]&, d: i64, fs: f64, rx: f64, ry: f64, rw: f64, rh: f64,
     }
 }
 
-// --- boxes --------------------------------------------------------------------
 
 fn play_mark(out: u8[>..]&, b: Box) {
     let d = min(b.w, b.h) * 0.18;
@@ -433,14 +408,12 @@ fn page_bg(out: u8[>..]&, p: Page) {
     out.append("\"/>\n");
 }
 
-// One box. `progress` draws a plot or a chart partly.
 recursive fn box_svg(out: u8[>..]&, bi: i64, progress: f64) {
     let b = BOXES[bi];
     let k = b.kind;
     if k == BX_TEXT || k == BX_LABEL || k == BX_TEXFB { draw_text(out, b.a, b.x, b.y, b.w); }
     else if is_shape(k) { shape(out, b); }
     else if k == BX_MATH {
-        // Center the equation in the frame.
         let l = tb(b.p);
         let w, a, d = math_metrics(l, true);
         math_object(out, l, true, b.c, b.x + (b.w - w * b.c) / 2.0, b.y + (b.h - (a + d) * b.c) / 2.0 + a * b.c, role_color(b.color));
@@ -473,17 +446,11 @@ recursive fn box_svg(out: u8[>..]&, bi: i64, progress: f64) {
     }
 }
 
-// --- pages ----------------------------------------------------------------------
 
-// The boxes of a page state. Video frames are made of these layers.
 let LY_ALL = 0;
-// The background and the boxes that were there before this step.
 let LY_BASE = 1;
-// The boxes that come in at this step, except plots and charts.
 let LY_NEW = 2;
-// The boxes that leave after the previous step.
 let LY_LEAVE = 3;
-// The plots and charts that come in at this step, at `progress`.
 let LY_GROW = 4;
 let LY_BG = 5;
 
@@ -510,7 +477,6 @@ fn svg_open(out: u8[>..]&, w: f64, h: f64, vx: f64, vy: f64, vw: f64, vh: f64) {
     }
 }
 
-// A page state as SVG, `scale` × the page size in pixels.
 fn page_svg(out: u8[>..]&, pi: i64, step: i64, layer: i64, progress: f64, scale: f64) {
     let p = PAGES[pi];
     let m = mark();
@@ -526,10 +492,7 @@ fn page_svg(out: u8[>..]&, pi: i64, step: i64, layer: i64, progress: f64, scale:
     rewind(m);
 }
 
-// --- SVG export -----------------------------------------------------------------
 
-// A region to draw and trace: the box, the padding, the scale and the
-// tracer options (SlideImageExporter.traced).
 struct Region { box: i64, x: f64, y: f64, w: f64, h: f64, scale: f64, colors: i64, min_area: f64, tol: f64 }
 var REGIONS: Region[>..] = [];
 
@@ -540,12 +503,10 @@ fn add_region(bi: i64, padding: f64, scale: f64, colors: i64, min_area: f64, tol
     var w = b.w + 2.0 * padding;
     var h = b.h + 2.0 * padding;
     if b.kind == BX_MISSING { x = b.x + 5.0; y = b.y + 5.0; w = b.w - 10.0; h = b.h - 10.0; }
-    // Text can reach a little out of its frame (italic, descenders).
     if b.kind == BX_TEXT || b.kind == BX_LABEL || b.kind == BX_TEXFB || b.kind == BX_MISSING { y -= 2.0; h += 4.0; x -= 2.0; w += 4.0; }
     REGIONS.push(Region { bi, x, y, w, h, scale, colors, min_area, tol });
 }
 
-// The text of a page in reading order (SlideImageExporter.pageText).
 fn page_text(out: u8[>..]&, pi: i64) {
     let p = PAGES[pi];
     var n = 0;
@@ -560,13 +521,11 @@ fn page_text(out: u8[>..]&, pi: i64) {
         else if b.kind == BX_MISSING { out.append(tb(b.q)); }
         else if b.kind == BX_PLOT { plot_text(out, b.a); }
         else if b.kind == BX_CHART { chart_summary(out, b.a); }
-        // Trim the white space.
         while out.len > at && is_ws(out[out.len - 1]) { out.resize(out.len - 1); }
         if out.len == at { out.resize(start); } else { n++; }
     }
 }
 
-// StyledText.spokenString: the text, with equations spoken.
 fn txt_spoken(out: u8[>..]&, ti: i64) {
     let t = TXTS[ti];
     let at = out.len;
@@ -603,9 +562,6 @@ fn chart_summary(out: u8[>..]&, d: i64) {
     out.push('.');
 }
 
-// The SVG of a page for the SVG export. Shapes are SVG shapes. Each other
-// box is a "<!--ml-region N-->" mark for its traced shapes: REGIONS[N]
-// gives the part of the page to draw (region_svg) and the tracer options.
 fn export_svg(out: u8[>..]&, pi: i64, number: i64) {
     let p = PAGES[pi];
     REGIONS.clear();
@@ -630,20 +586,17 @@ fn export_svg(out: u8[>..]&, pi: i64, number: i64) {
         if k == BX_MISSING { missing_frame(out, b); }
         format(out, "<!--ml-region ", REGIONS.len, "-->\n");
         if k == BX_MEDIA {
-            // A photo: at most 480 pixels on the long edge, at most 24 colors.
             add_region(bi, 0.0, min(3.0, 480.0 / max(max(b.w, b.h), 1.0)), 24, 3.0, 0.9);
             if b.a == M_VIDEO { play_mark(out, b); }
         }
         else if k == BX_MATH { add_region(bi, 4.0, 4.0, 2, 2.0, 0.6); }
         else if k == BX_PLOT || k == BX_CHART { add_region(bi, 2.0, 2.0, 10, 2.0, 0.6); }
         else if k == BX_THUMB { add_region(bi, 0.0, 1.0, 16, 2.0, 0.75); }
-        // Text: the browser has no glyph outlines, so the text is traced too.
         else { add_region(bi, 0.0, 4.0, 8, 1.0, 0.5); }
     }
     out.append("</svg>\n");
 }
 
-// One region of the page, alone and without the background, in pixels.
 fn region_svg(out: u8[>..]&, ri: i64) {
     let r = REGIONS[ri];
     let m = mark();
@@ -655,7 +608,6 @@ fn region_svg(out: u8[>..]&, ri: i64) {
     rewind(m);
 }
 
-// The label of a traced region, for screen readers.
 fn region_label(out: u8[>..]&, ri: i64) {
     let b = BOXES[REGIONS[ri].box];
     if b.kind == BX_MEDIA || b.kind == BX_MISSING { out.append(tb(b.q)); }
@@ -664,7 +616,6 @@ fn region_label(out: u8[>..]&, ri: i64) {
     else if b.kind == BX_CHART { chart_summary(out, b.a); }
 }
 
-// The plot description as plain text (pl_description writes HTML).
 fn plot_text(out: u8[>..]&, d: i64) {
     pl_parse(sp_text(EV[d].c));
     var h: u8[>..] = [];

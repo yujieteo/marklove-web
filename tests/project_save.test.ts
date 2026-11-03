@@ -1,0 +1,91 @@
+import { test, expect, mock } from "bun:test";
+import { installDom, fakeDocument, FakeElement } from "./fakedom.ts";
+import { storeStub, failSaves } from "./app_stubs/store.ts";
+import { uiModule, menuItems, announced, picked } from "./app_stubs/ui.ts";
+import { previewModule } from "./app_stubs/preview.ts";
+import { findStub } from "./app_stubs/find.ts";
+import { exportStub } from "./app_stubs/export.ts";
+import { panelsStub } from "./app_stubs/panels.ts";
+
+const dom = installDom();
+const generic = new Map<string, FakeElement>();
+fakeDocument.getElementById = (id: string): FakeElement => {
+    if (id === "source") return dom.textarea;
+    if (id === "highlight") return dom.highlight;
+    if (id === "editor") return dom.box;
+    if (id === "placeholder") return dom.placeholder;
+    let el = generic.get(id);
+    if (!el) {
+        el = new FakeElement();
+        el.id = id;
+        generic.set(id, el);
+    }
+    return el;
+};
+Reflect.set(globalThis, "matchMedia", () => ({ matches: false, addEventListener() {} }));
+Reflect.set(globalThis, "addEventListener", () => {});
+
+mock.module("../src/store.ts", () => storeStub);
+mock.module("../src/ui.ts", () => uiModule);
+mock.module("../src/preview.ts", () => previewModule);
+mock.module("../src/find.ts", () => findStub);
+mock.module("../src/export.ts", () => exportStub);
+mock.module("../src/panels.ts", () => panelsStub);
+
+await import("../src/app.ts");
+const E = await import("../src/editor.ts");
+const settle = (): Promise<void> => new Promise((r) => setTimeout(r, 50));
+await settle();
+
+
+async function openFromMenu(label: string): Promise<void> {
+    const item = menuItems("title-menu").find((i) => i.label === label);
+    if (!item?.action) throw new Error("project " + label + " is not in the title menu");
+    await item.action();
+    await settle();
+}
+
+test("project-save.sm.md row saving/save_failed: an edit whose save failed is still there when the project opens again", async () => {
+    dom.textarea.key("x");
+    expect(E.text()).toBe("lpha\n");
+    failSaves.remaining = 1;
+    await openFromMenu("B");
+    await openFromMenu("A");
+    expect(E.text()).toBe("lpha\n");
+});
+
+test("project-save.sm.md row dirty/open_other: when the storage is full, the switch stops and keeps the edit", async () => {
+    dom.textarea.key("x");
+    expect(E.text()).toBe("pha\n");
+    failSaves.remaining = 2;
+    await openFromMenu("B");
+    expect(E.text()).toBe("pha\n");
+    expect(failSaves.remaining).toBe(1);
+    await openFromMenu("A");
+    expect(E.text()).toBe("pha\n");
+    expect(failSaves.remaining).toBe(0);
+    await openFromMenu("A");
+    expect(E.text()).toBe("pha\n");
+    await openFromMenu("B");
+    expect(E.text()).toBe("beta\n");
+    await openFromMenu("A");
+    expect(E.text()).toBe("pha\n");
+});
+
+test("project-save.sm.md row saving/save_failed: an import does not say that it opened the project when the save failed", async () => {
+    dom.textarea.key("x");
+    expect(E.text()).toBe("ha\n");
+    failSaves.remaining = 1;
+    picked.files = [new File(["# Notes\n"], "notes.md", { type: "text/markdown" })];
+    announced.length = 0;
+    await openFromMenu("Import Markdown or ZIP…");
+    expect(E.text()).toBe("ha\n");
+    expect(announced.some((t) => t.startsWith("Imported"))).toBe(false);
+    expect(announced.some((t) => t.startsWith("Marklove could not save the change."))).toBe(true);
+    expect(failSaves.remaining).toBe(0);
+    announced.length = 0;
+    await openFromMenu("Import Markdown or ZIP…");
+    expect(E.text()).toBe("# Notes\n");
+    expect(announced).toContain("Imported “notes”.");
+    picked.files = [];
+});

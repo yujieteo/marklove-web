@@ -1,9 +1,3 @@
-// LaTeX math to MathML Core, as the app's MathMLConverter does.
-//
-// The parser writes MathML straight into `MO`. Where MathML puts an element
-// around content that the parser has already written (scripts, `\over`),
-// it inserts the opening tag at the remembered start. The accepted commands
-// are the app's: the SwiftMath list in mathtable.goose.
 
 import base;
 import mathtable;
@@ -18,7 +12,6 @@ let MT_AMP = 7;
 let MT_ROW = 8;
 let MT_PRIME = 9;
 
-// Font styles, as SwiftMath's MTFontStyle.
 let FS_NONE = -1;
 let FS_DEFAULT = 0;
 let FS_ROMAN = 1;
@@ -39,7 +32,6 @@ var MO: u8[>..] = [];
 var MTMP: u8[>..] = [];
 var MI = 0;
 var MFONT = FS_NONE;
-// The unsupported commands of the last conversion, separated by new lines.
 var MUNSUP: u8[>..] = [];
 
 fn mt_text(t: MTok) -> u8[:] { MSRC[t.o..t.o + t.n] }
@@ -135,7 +127,6 @@ fn pk() -> i64 { if MI < MTK.len { MTK[MI].k } else { 0 } }
 fn pk_cmd(name: u8[:]) -> bool { MI < MTK.len && MTK[MI].k == MT_CMD && mt_text(MTK[MI]) == name }
 fn pk_char(c: u8) -> bool { MI < MTK.len && MTK[MI].k == MT_CHAR && MTK[MI].n == 1 && MSRC[MTK[MI].o] == c }
 
-// Inserts text at position p of MO.
 fn mo_insert(p: i64, t: u8[:]) {
     let n = MO.len;
     MO.append(t);
@@ -149,7 +140,6 @@ fn unsupported(name: u8[:]) {
     MUNSUP.append(name);
 }
 
-// One code point of a letter or digit in a math alphabet.
 fn math_alpha(out: u8[>..]&, c: u8, style: i64) {
     let up = c >= 'A' && c <= 'Z';
     let lo = c >= 'a' && c <= 'z';
@@ -228,7 +218,6 @@ fn symbol_atom(i: i64) {
         if MFONT != FS_NONE && MFONT != FS_ITALIC { MO.append("<mi>"); math_alpha_text(MO, s.text, MFONT); MO.append("</mi>"); return; }
         MO.append("<mi>"); esc(MO, s.text); MO.append("</mi>");
     } else if k == 2 {
-        // Swift's isAlphabetic: letters yes, the ordinary symbols below no.
         let alpha = !multi && s.text.len > 0 && (is_alpha(s.text[0]) || (s.text[0] >= 0xC3 && index_of("□∠⊥⋯⋱∅∃∀∞…∡℧∇∄𝜕′⊤△⋮℘‖", s.text) < 0));
         MO.append(if alpha { "<mi>" } else { "<mi mathvariant=\"normal\">" });
         esc(MO, s.text);
@@ -259,7 +248,6 @@ fn accent_mark(out: u8[>..]&, comb: u8[:]) {
     push_utf8(out, m);
 }
 
-// Writes a delimiter after \left, \right or \big.
 fn delimiter() {
     guard MI < MTK.len else { return; }
     let t = MTK[MI];
@@ -297,7 +285,6 @@ fn big_size(name: u8[:]) -> const u8[:] {
     return "";
 }
 
-// Reads a `{...}` argument as raw text into MTMP, for \text and friends.
 fn raw_argument() {
     MTMP.clear();
     if pk() != MT_OPEN {
@@ -345,7 +332,6 @@ fn css_color(out: u8[>..]&, raw: u8[:]) {
     out.append("inherit");
 }
 
-// Atoms until `}`, `\right`, `&`, `\\`, or the end, with infix `\over`.
 recursive fn math_sequence(stop_close: bool, stop_right: bool, stop_cell: bool) {
     let start = MO.len;
     var infix = 0;
@@ -378,7 +364,6 @@ recursive fn math_sequence(stop_close: bool, stop_right: bool, stop_cell: bool) 
     }
 }
 
-// `{...}` or one atom, for a command argument.
 recursive fn math_argument() {
     if MI >= MTK.len { MO.append("<mrow></mrow>"); return; }
     if MTK[MI].k == MT_OPEN {
@@ -404,7 +389,6 @@ recursive fn math_atom_scripts() {
     var sup0 = -1;
     var sup1 = -1;
     let scripts = MO.len;
-    // The scripts go to MO after the base, then are put in MathML order.
     loop {
         let k = pk();
         if k == MT_SUP {
@@ -423,7 +407,6 @@ recursive fn math_atom_scripts() {
         else { break; }
     }
     if sub0 < 0 && sup0 < 0 && primes == 0 { return; }
-    // Copy the scripts out, then write them back in order.
     let t0 = MTMP.len;
     if sub0 >= 0 { MTMP.append(MO[sub0..sub1]); }
     let t1 = MTMP.len;
@@ -456,7 +439,6 @@ recursive fn math_atom_scripts() {
     MO.push('>');
 }
 
-// One atom. Returns false at a token that ends a sequence.
 recursive fn math_atom() -> bool {
     if MI >= MTK.len { return false; }
     let t = MTK[MI];
@@ -482,7 +464,6 @@ recursive fn math_atom() -> bool {
 }
 
 recursive fn command_atom(t: MTok) {
-    // Copies, because the arguments below change the shared buffers.
     var raw: u8[..48] = [];
     for c in mt_text(t) { if raw.len < 48 { raw.push(c); } }
     var name: u8[..48] = [];
@@ -524,7 +505,6 @@ recursive fn command_atom(t: MTok) {
             MO.append("<mtext>");
             let p = MO.len;
             math_alpha_text(MO, MTMP, v);
-            // Escape what was written.
             var tmp: u8[>..] = [];
             tmp.append(MO[p..]);
             MO.resize(p);
@@ -587,7 +567,6 @@ recursive fn command_atom(t: MTok) {
                 if MI == before { MI++; }
             }
             MI++;
-            // The degree goes after the base in MathML.
             let t0 = MTMP.len;
             MTMP.append(MO[d0..]);
             MO.resize(d0);
@@ -704,7 +683,6 @@ recursive fn command_atom(t: MTok) {
     MO.append("</mtext></merror>");
 }
 
-// Column alignments: 0 center, 1 left, 2 right/left pairs, 3 eqnarray.
 fn cell_align(mode: i64, k: i64) -> const u8[:] {
     if mode == 1 { return "left"; }
     if mode == 2 { return if k % 2 == 0 { "right" } else { "left" }; }
@@ -712,7 +690,6 @@ fn cell_align(mode: i64, k: i64) -> const u8[:] {
     return "center";
 }
 
-// Rows and cells until `\end` or `}`. With mode < 0, cells are plain mtd.
 recursive fn math_rows(end_close: bool, mode: i64) {
     var row_start = MO.len;
     var cells = 0;
@@ -787,7 +764,6 @@ recursive fn math_environment(env: u8[:]) {
     if fence > 0 { MO.append("</mrow>"); }
 }
 
-// True when the braces of the LaTeX do not balance.
 fn unbalanced_brace(t: u8[:]) -> bool {
     var depth = 0;
     var i = 0;
@@ -801,8 +777,6 @@ fn unbalanced_brace(t: u8[:]) -> bool {
     return depth != 0;
 }
 
-// Converts LaTeX to MathML at the end of out. Returns false (and writes the
-// LaTeX as code) when the math has an unsupported command.
 fn math_html(out: u8[>..]&, latex: u8[:], display: bool) -> bool {
     MSRC.clear();
     MSRC.append(latex);
@@ -834,7 +808,6 @@ fn math_html(out: u8[>..]&, latex: u8[:], display: bool) -> bool {
     return true;
 }
 
-// The unsupported commands in LaTeX, for the source checks.
 fn math_check(latex: u8[:]) -> u8[:] {
     var tmp: u8[>..] = [];
     math_html(tmp, latex, false);

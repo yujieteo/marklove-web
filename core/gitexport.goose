@@ -1,33 +1,3 @@
-// Git history export: writes a real `.git` folder into the ZIP builder of
-// pack.goose. Ports the object-writing parts of Git/GitRepository.swift:
-// writeObject, writeTree, commitIfChanged, setHead (reflog), initialize,
-// writeConfig, writeIndex and Zlib.compress with stored blocks.
-//
-// Public functions (call in this sequence, oldest version first):
-//
-//   git_begin(name: u8[:], email: u8[:], mtime: i64)
-//       Starts a new history with this author. mtime (unix seconds) goes
-//       into the ZIP entries of the objects.
-//   git_file(path: u8[:], data: u8[:]) -> bool
-//       Adds one file to the next commit. The first git_file after a commit
-//       starts a new file list. False for an unsafe or hidden path.
-//   git_file_ref(path: u8[:], sha: u8[:], size: i64) -> bool
-//       The same for a file whose blob object JavaScript writes itself: sha
-//       is the 40-digit SHA-1 of "blob <size>\0" and the bytes. JavaScript
-//       adds .git/objects/<2 digits>/<38 digits> once, with zip_add_ref.
-//   git_commit(message: u8[:], unix_time: i64, tz_minutes: i64, out)
-//       Commits the file list, with the previous commit as parent. Appends
-//       the 40-digit commit SHA to out. When the tree is the same as the
-//       parent's, no commit is made and out gets the parent's SHA, as
-//       commitIfChanged.
-//   git_finish(mtime: i64)
-//       Adds the rest of `.git/` to the ZIP builder: the folders that Git
-//       needs, HEAD, config, description, info/exclude, refs/heads/main, the
-//       reflogs and the index of the last commit. The objects go into the
-//       ZIP builder as they are made, so call zip_begin before git_begin. JS adds the
-//       worktree files itself with zip_add; for a clean `git status` they are
-//       the files of the last commit. mtime (unix seconds) goes into the ZIP
-//       entries and the index.
 
 import std;
 import base;
@@ -37,10 +7,8 @@ struct GxFile { po: i64, pn: i64, obj: i64, size: i64 }
 
 var GX_NAME: u8[>..] = [];
 var GX_EMAIL: u8[>..] = [];
-// Objects: 20 raw SHA bytes each. The objects themselves are in the ZIP.
 var GX_SHA: u8[>..] = [];
 var GX_MTIME = 0;
-// The file list of the current (or last) commit.
 var GX_FP: u8[>..] = [];
 var GX_FILES: GxFile[>..] = [];
 var GX_NEW = false;
@@ -86,7 +54,6 @@ fn gx_be32(out: u8[>..]&, v: i64) {
     out.push((v & 0xFF) as u8);
 }
 
-// zlib with deflate stored blocks, as Zlib.compress and Zlib.stored.
 fn gx_zlib(out: u8[>..]&, d: u8[:]) {
     out.push(0x78);
     out.push(0x01);
@@ -111,7 +78,6 @@ fn gx_zlib(out: u8[>..]&, d: u8[:]) {
     gx_be32(out, (b << 16) | a);
 }
 
-// Stores an object and returns its index. Objects are stored once.
 fn gx_write(kind: const u8[:], content: u8[:]) -> i64 {
     var raw: u8[>..] = [];
     format(raw, kind, " ", content.len);
@@ -154,8 +120,6 @@ fn git_file_ref(path: u8[:], sha: u8[:], size: i64) -> bool {
 
 fn gx_nibble(c: u8) -> i64 { if is_digit(c) { (c - '0') as i64 } else { (c - 'a' + 10) as i64 } }
 
-// One file of the next commit: its bytes, or the SHA of a blob that
-// JavaScript writes.
 fn gx_file(path: u8[:], data: u8[:], sha: u8[:], size: i64) -> bool {
     if GX_NEW {
         GX_FP.clear();
@@ -164,7 +128,6 @@ fn gx_file(path: u8[:], data: u8[:], sha: u8[:], size: i64) -> bool {
     }
     var clean: u8[>..] = [];
     if !zip_clean_name(path, clean) { return false; }
-    // Hidden files (and .git) are not in the worktree, as worktreeFiles.
     if clean[0] == '.' || index_of(clean, "/.") >= 0 { return false; }
     var obj = -1;
     if sha.len == 0 { obj = gx_write("blob", data); }
@@ -195,8 +158,6 @@ fn gx_file(path: u8[:], data: u8[:], sha: u8[:], size: i64) -> bool {
     return true;
 }
 
-// The file indexes in byte order of their paths. This is also Git tree order,
-// because a folder's paths all start with "name/".
 fn gx_sorted() -> i64[>..] {
     var idx: i64[>..] = [];
     for i in GX_FILES.len { idx.push(i); }
@@ -208,17 +169,13 @@ fn gx_sorted() -> i64[>..] {
     return idx;
 }
 
-// The child trees of the gx_tree calls that are running.
 var GX_KIDS: i64[>..] = [];
 
-// The byte offset of the first "/" in file f at or after off, or -1.
 fn gx_slash(f: GxFile, off: i64) -> i64 {
     for k in off..f.pn { if GX_FP[f.po + k] == '/' { return k - off; } }
     return -1;
 }
 
-// The end of the group of files idx[i..b] in the folder whose name is the
-// s bytes at `off` of file idx[i].
 fn gx_group_end(idx: i64[:], i: i64, b: i64, off: i64, s: i64) -> i64 {
     let f = GX_FILES[idx[i]];
     var j = i + 1;
@@ -231,10 +188,7 @@ fn gx_group_end(idx: i64[:], i: i64, b: i64, off: i64, s: i64) -> i64 {
     return j;
 }
 
-// Writes the tree for the sorted files idx[a..b], whose paths share the
-// first `off` bytes. Returns the object index.
 recursive fn gx_tree(idx: i64[:], a: i64, b: i64, off: i64) -> i64 {
-    // First the child trees, with no growable local in scope.
     let kids = GX_KIDS.len;
     var i = a;
     while i < b {
@@ -320,7 +274,6 @@ fn git_commit(message: u8[:], unix_time: i64, tz_minutes: i64, out: u8[>..]&) {
     body.append(text);
     body.push('\n');
     let sha = gx_write("commit", body);
-    // The reflog line, as setHead.
     var line: u8[>..] = [];
     if GX_HEAD >= 0 { gx_obj_hex(line, GX_HEAD); } else { line.append("0000000000000000000000000000000000000000"); }
     line.push(' ');
@@ -337,7 +290,6 @@ fn git_commit(message: u8[:], unix_time: i64, tz_minutes: i64, out: u8[>..]&) {
     gx_obj_hex(out, sha);
 }
 
-// The index (version 2) of the current file list, as writeIndex.
 fn gx_index(out: u8[>..]&, mtime: i64) {
     let idx = gx_sorted();
     out.append("DIRC");
@@ -347,18 +299,17 @@ fn gx_index(out: u8[>..]&, mtime: i64) {
     for i in idx {
         let f = GX_FILES[i];
         let start = out.len;
-        gx_be32(out, secs); gx_be32(out, 0);    // ctime
-        gx_be32(out, secs); gx_be32(out, 0);    // mtime
-        gx_be32(out, 0); gx_be32(out, 0);       // dev, ino
-        gx_be32(out, 0x81A4);                   // mode 0100644
-        gx_be32(out, 0); gx_be32(out, 0);       // uid, gid
+        gx_be32(out, secs); gx_be32(out, 0);
+        gx_be32(out, secs); gx_be32(out, 0);
+        gx_be32(out, 0); gx_be32(out, 0);
+        gx_be32(out, 0x81A4);
+        gx_be32(out, 0); gx_be32(out, 0);
         gx_be32(out, f.size);
         for k in 20 { out.push(GX_SHA[f.obj * 20 + k]); }
         let n = min(f.pn, 0xFFF);
         out.push((n >> 8) as u8);
         out.push((n & 0xFF) as u8);
         for k in f.po..f.po + f.pn { out.push(GX_FP[k]); }
-        // One to eight NUL bytes, to a multiple of eight.
         let npad = 8 - (out.len - start) % 8;
         for k in npad { out.push(0); }
     }
@@ -382,7 +333,6 @@ fn gx_dir(name: const u8[:], mtime: i64) {
 }
 
 fn git_finish(mtime: i64) {
-    // The folders of initialize(), with their parents.
     gx_dir("", mtime);
     gx_dir("/objects", mtime);
     gx_dir("/objects/info", mtime);

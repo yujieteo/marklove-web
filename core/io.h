@@ -1,8 +1,3 @@
-/* The input side of the boundary between JavaScript and the Goose core.
- * JavaScript asks for a buffer with ml_in_alloc, writes UTF-8 or bytes into
- * it, and then calls an exported Goose function. Goose copies a buffer into
- * a builder with ml_arg. Results come back as a const u8[:] (a pointer and
- * a length), so no output buffer is needed here. */
 #include <stdlib.h>
 
 #define ML_ARGS 8
@@ -22,13 +17,6 @@ static void ml_arg(int32_t i, gs_rref out) {
     gs_bld_append(out, ml_in_buf[i], ml_in_len[i]);
 }
 
-/* Data stacks in WebAssembly. The Goose runtime reserves one region for
- * each data stack with mmap, and Emscripten's mmap clears all of it.
- * New linear memory is already zero, and the runtime keeps its regions
- * until the end, so the regions come from the heap without a clear. The
- * build links these in place of mmap and munmap (--wrap). A region holds at
- * most GS_STACK_RESERVE bytes and has no guard pages here, so JavaScript
- * limits the size of a document (see web/core.js). */
 #ifdef __EMSCRIPTEN__
 #include <sys/mman.h>
 void *__wrap_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t off) {
@@ -39,24 +27,12 @@ void *__wrap_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t off
 int __wrap_munmap(void *addr, size_t len) { (void)addr; (void)len; return 0; }
 #endif
 
-/* A project ZIP can be large: Goose reads it in its input buffer, with no
- * copy into a data stack. */
 const uint8_t *ml_pack_import(sl_u8 zip, int64_t *len);
 const uint8_t *ml_pack_import_arg(int64_t *len) {
     sl_u8 zip = { ml_in_buf[0], ml_in_len[0] };
     return ml_pack_import(zip, len);
 }
 
-/* Text, math and media metrics for the page layout (core/layout.goose), as
- * the app's TextMeasurer. The browser measures, with the fonts that the
- * page renderer uses: ml_measure gives the advance of a text at 100 px in a
- * CSS font, and ml_math_metric gives an equation's width, ascent or descent
- * (which = 0, 1, 2) for a font size of 1 px, or -1 when it cannot render.
- * which = 3 gives the distance from the top of the box that holds the
- * equation (see math_div in core/pagesvg.goose) to its baseline.
- * JavaScript sets Module.mlMeasure and Module.mlMath (web/pages.js). Without
- * them, as in the tests, an estimate from character counts is used, as the
- * app's ApproximateMeasurer. */
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 EM_JS(double, ml_js_measure, (const uint8_t *t, int tn, const uint8_t *f, int fn), {
@@ -78,9 +54,6 @@ static double ml_js_math(const uint8_t *t, int tn, int display, int which) { (vo
 double ml_measure(sl_u8 t, sl_u8 font) { return ml_js_measure(t.data, (int)t.len, font.data, (int)font.len); }
 double ml_math_metric(sl_u8 latex, int32_t display, int32_t which) { return ml_js_math(latex.data, (int)latex.len, display, which); }
 
-/* The SVG export traces RGBA pixels of a region in place (core/trace.goose):
- * a region can be larger than a data stack. So are its two arrays with one
- * byte for each pixel and each grid point: they come from the heap. */
 const uint8_t *ml_trace(sl_u8 px, sl_u8 rank, sl_u8 taken, int32_t w, int32_t h, int32_t colors, double min_area, double tol,
                         double x, double y, double scale, int64_t *len);
 const uint8_t *ml_trace_arg(int32_t w, int32_t h, int32_t colors, double min_area, double tol,

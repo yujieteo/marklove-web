@@ -1,0 +1,4 @@
+{
+  "entry": ["src/app.ts", "src/runtime.ts", "src/article.ts", "scripts/*.ts", "tests/*.test.ts", "docs/figures/architecture.ts"],
+  "project": ["src/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts", "docs/**/*.ts"]
+}

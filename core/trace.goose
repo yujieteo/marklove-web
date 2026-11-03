@@ -1,18 +1,3 @@
-// RasterTracer: raster pixels as SVG shapes, for the SVG slide export.
-//
-// The process is deterministic: the same pixels always give the same SVG.
-// 1. Color reduction: median cut makes a palette of at most `colors` colors.
-//    Each pixel gets the nearest palette color. Pixels with alpha below 50%
-//    are empty.
-// 2. Layers: the most common color is the bottom layer. Layer k covers each
-//    pixel with a color of rank k or higher, so each layer is under the
-//    layers above it, and no gaps show between shapes.
-// 3. Outlines: the edges between covered and empty pixels join into closed
-//    paths. The even-odd fill rule makes holes from inner paths.
-// 4. Simplification: straight runs join, and the Ramer-Douglas-Peucker
-//    method removes the small steps of the pixel grid.
-//
-// The pixels are RGBA (8 bits each, not premultiplied, rows from the top).
 
 import base;
 
@@ -26,7 +11,6 @@ var TR_KEEP: bool[>..] = [];
 
 fn tr_channel(px: u8[:], i: i64, c: i64) -> i64 { px[i * 4 + c] as i64 }
 
-// The channel with the largest range of a box of pixels, and the range.
 fn tr_range(px: u8[:], items: i64[:]) -> i64, i64 {
     var lo: i64[3] = [255, 255, 255];
     var hi: i64[3] = [0, 0, 0];
@@ -43,10 +27,7 @@ fn tr_range(px: u8[:], items: i64[:]) -> i64, i64 {
 }
 
 fn tr_median_cut(px: u8[:], count: i64, opaque: i64, max_colors: i64, palette: RGB[>..]&) {
-    // A sample keeps large images fast: each step-th opaque pixel. The step
-    // is fixed, so the result stays the same.
     let step = max(1, opaque / 60000);
-    // Boxes are ranges of `items`; each split sorts one range.
     var items: i64[>..] = [];
     var k = 0;
     for i in count {
@@ -92,7 +73,6 @@ fn tr_nearest(palette: RGB[:], r: i64, g: i64, b: i64) -> i64 {
         let dr = c.r - r;
         let dg = c.g - g;
         let db = c.b - b;
-        // Weighted for the eye: green counts most.
         let d = 3 * dr * dr + 4 * dg * dg + 2 * db * db;
         if d < best_d { best_d = d; best = k; }
     }
@@ -108,7 +88,6 @@ fn tr_area(lp: TP[:]) -> f64 {
     return (s as f64) / 2.0;
 }
 
-// Removes points in the middle of straight runs.
 fn tr_merge_straight(lp: TP[:], out: TP[>..]&) {
     out.clear();
     let n = lp.len;
@@ -164,7 +143,6 @@ fn tr_simplify(lp: TP[:], tol: f64, out: FP[>..]&) {
     var pts: FP[>..] = [];
     for p in lp { pts.push(FP { p.x as f64, p.y as f64 }); }
     if pts.len <= 4 { out.append(pts); return; }
-    // Split at the point farthest from the first point.
     var far = 0;
     var far_d = -1.0;
     for p, i in pts {
@@ -188,9 +166,6 @@ fn tr_num(out: u8[>..]&, v: f64) {
     fmt_fixed(out, r, 1);
 }
 
-// One outline set for layer `rank`: path data in `d`. rk holds the rank
-// of each pixel (255: empty). taken counts the edges that each grid point
-// has used.
 fn tr_layer(rk: u8[:], taken: u8[:], w: i64, h: i64, rank: i64, min_area: f64, tol: f64, d: u8[>..]&) {
     let gw = w + 1;
     let points = gw * (h + 1);
@@ -198,20 +173,13 @@ fn tr_layer(rk: u8[:], taken: u8[:], w: i64, h: i64, rank: i64, min_area: f64, t
     fn inside(x: i64, y: i64) -> bool {
         x >= 0 && y >= 0 && x < w && y < h && rk[y * w + x] != 255 && (rk[y * w + x] as i64) >= rank
     }
-    // Directed edges with the covered pixel on the right (y down). The
-    // outgoing edges of a grid point, in the order of a scan of the pixels
-    // (rows, then columns): at most two. Gives the end of edge t, or -1.
     fn edge_to(v: i64, t: i64) -> i64 {
         let x = v % gw;
         let y = v / gw;
         var n = 0;
-        // The bottom edge of the pixel above and to the left.
         if inside(x - 1, y - 1) && !inside(x - 1, y) { if n == t { return y * gw + x - 1; } n++; }
-        // The left edge of the pixel above.
         if inside(x, y - 1) && !inside(x - 1, y - 1) { if n == t { return (y - 1) * gw + x; } n++; }
-        // The right edge of the pixel to the left.
         if inside(x - 1, y) && !inside(x, y) { if n == t { return (y + 1) * gw + x; } n++; }
-        // The top edge of the pixel.
         if inside(x, y) && !inside(x, y - 1) { if n == t { return y * gw + x + 1; } }
         return -1;
     }
@@ -226,7 +194,6 @@ fn tr_layer(rk: u8[:], taken: u8[:], w: i64, h: i64, rank: i64, min_area: f64, t
         }
     }
     var simple: FP[>..] = [];
-    // Start points in a fixed order, so that the output is the same each time.
     for start in points {
         while edge_to(start, taken[start] as i64) >= 0 {
             TR_LOOP.clear();
@@ -259,15 +226,10 @@ fn tr_layer(rk: u8[:], taken: u8[:], w: i64, h: i64, rank: i64, min_area: f64, t
     }
 }
 
-// The traced shapes of a region as an SVG group at (x, y) in the page.
-// label: alternative text, or empty for a decorative group. A region can
-// have millions of pixels, so the arrays with one byte for each pixel (rk)
-// and each grid point (taken) come from the heap (see io.h).
 fn trace(out: u8[>..]&, px: u8[:], rk: u8[:], taken: u8[:], w: i64, h: i64, max_colors: i64, min_area: f64, tol: f64,
          x: f64, y: f64, scale: f64, label: u8[:]) {
     let count = w * h;
     if w <= 0 || h <= 0 || px.len < count * 4 { return; }
-    // 1. Palette.
     var opaque = 0;
     for i in count { if px[i * 4 + 3] >= 128 { opaque++; } }
     if opaque == 0 { return; }
@@ -275,14 +237,12 @@ fn trace(out: u8[>..]&, px: u8[:], rk: u8[:], taken: u8[:], w: i64, h: i64, max_
     tr_median_cut(px, count, opaque, max(1, max_colors), palette);
     var counts: i64[>..] = [];
     for c in palette { counts.push(0); }
-    // The palette index of each pixel, then its rank.
     for i in count {
         if px[i * 4 + 3] < 128 { rk[i] = 255; continue; }
         let k = tr_nearest(palette, tr_channel(px, i, 0), tr_channel(px, i, 1), tr_channel(px, i, 2));
         rk[i] = k as u8;
         counts[k] += 1;
     }
-    // 2. Rank colors: the most common first. Ties keep the palette order.
     var order: i64[>..] = [];
     for k in palette.len { if counts[k] > 0 { order.push(k); } }
     stable_sort(order) { a, b => counts[a] > counts[b] };
@@ -290,7 +250,6 @@ fn trace(out: u8[>..]&, px: u8[:], rk: u8[:], taken: u8[:], w: i64, h: i64, max_
     for k in palette.len { rank.push(-1); }
     for k, r in order { rank[k] = r; }
     for i in count { if rk[i] != 255 { rk[i] = rank[rk[i] as i64] as u8; } }
-    // 3 and 4. One outline set for each layer.
     var body: u8[>..] = [];
     var d: u8[>..] = [];
     for k, r in order {

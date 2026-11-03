@@ -1,43 +1,11 @@
-// Find and Replace, sam commands, line differences, and commit messages.
-// Ported from MarkloveCore Text/Plan9Regex.swift, Text/Sam.swift,
-// Text/LineDiff.swift and Git/CommitMessage.swift.
-//
-// All text is UTF-8. All offsets in and out are UTF-8 byte offsets.
-// `plain` = true finds the text as typed (the Plain text setting).
-// Otherwise the pattern is a Plan 9 (sam) regular expression.
-//
-// edit_find(out, text, pattern, plain, ignore_case)
-//     {"matches":[[s,e],...]}  or  {"error":"message"}
-//     Every match, without overlap. JS picks next, previous and the count.
-// edit_replace(out, text, pattern, plain, ignore_case, replacement, sel_s, sel_e, all)
-//     all = true: replaces every match.
-//     all = false: replaces the match that is the selection (sel_s..sel_e).
-//     {"count":n,"text":"new text","selection":[s,e]}
-//     {"count":0} when nothing is replaced, or {"error":"message"}.
-//     The selection is the caret after the replacement (replace one only).
-// edit_sam(out, command, text, sel_s, sel_e, ignore_case)
-//     {"text":"new text" or null,"selection":[s,e],"printed":["...",...],"summary":"..."}
-//     or {"error":"message"}. "text" is null when the text did not change.
-// edit_diff(out, old, new)
-//     [{"op":"same","text":"...","old":1,"new":1},
-//      {"op":"remove","text":"...","old":2},{"op":"add","text":"...","new":2},...]
-//     old and new are 1-based line numbers.
-// edit_commit_message(out, old, new)
-//     Plain text: the subject line, then for more than one change a blank
-//     line and one "- " line for each change. It uses the parse module.
 
 import base;
 import parse;
 
-// --- shared state -------------------------------------------------------
 
-// The code points of the current text, and the byte offset of each one in
-// the input (with the full length at the end).
 var ED_CP: i64[>..] = [];
 var ED_BO: i64[>..] = [];
-// Code point strings: patterns, replacements, the text of changes.
 var ED_S: i64[>..] = [];
-// The error message of the current call. Empty when there is no error.
 var ED_ERR: u8[>..] = [];
 
 fn ed_failed() -> bool { ED_ERR.len > 0 }
@@ -46,15 +14,12 @@ fn ed_fail(msg: u8[:]) { if ED_ERR.len == 0 { ED_ERR.append(msg); } }
 
 fn ed_too_large() { ed_fail("The result is larger than 512 KB. Make a smaller change."); }
 
-// ED_S holds 8-byte code points, so it stays far below one data stack.
 fn ed_room(n: i64) -> bool {
     if ED_S.len + n <= 3 * MAX_TEXT / 2 { return true; }
     ed_too_large();
     return false;
 }
 
-// A message with up to three code points or numbers put in: a c1 b c2 d c3 e.
-// A code point < 0 is not written.
 fn ed_fail_c(a: u8[:], c1: i64, b: u8[:], c2: i64, d: u8[:], c3: i64, e: u8[:]) {
     if ED_ERR.len > 0 { return; }
     var m: u8[>..] = [];
@@ -68,7 +33,6 @@ fn ed_fail_c(a: u8[:], c1: i64, b: u8[:], c2: i64, d: u8[:], c3: i64, e: u8[:]) 
     ED_ERR.append(m);
 }
 
-// "a" + the code points ED_S[o..o+n] + "b".
 fn ed_fail_s(a: u8[:], o: i64, n: i64, b: u8[:]) {
     if ED_ERR.len > 0 { return; }
     var m: u8[>..] = [];
@@ -108,8 +72,6 @@ fn ed_reset() {
     SM_PS.clear();
 }
 
-// Decodes UTF-8 into ED_CP, with the byte offsets in ED_BO.
-// A malformed byte is U+FFFD.
 fn ed_load(s: u8[:]) {
     ED_CP.clear();
     ED_BO.clear();
@@ -138,8 +100,6 @@ fn ed_load(s: u8[:]) {
     ED_BO.push(s.len);
 }
 
-// The code point index at a byte offset. An offset inside a character moves
-// to its start.
 fn ed_index(off: i64) -> i64 {
     var lo = 0;
     var hi = ED_CP.len;
@@ -151,8 +111,6 @@ fn ed_index(off: i64) -> i64 {
     return lo;
 }
 
-// The lower-case and upper-case forms of a code point, for ASCII, Latin-1,
-// Latin Extended-A, Greek and Cyrillic.
 fn ed_lower(c: i64) -> i64 {
     if c < 0x80 { if c >= 'A' && c <= 'Z' { return c + 32; } return c; }
     if c >= 0xC0 && c <= 0xDE && c != 0xD7 { return c + 32; }
@@ -193,10 +151,8 @@ fn ed_upper(c: i64) -> i64 {
     return c;
 }
 
-// Appends the code points ED_CP[a..b] as UTF-8.
 fn ed_put_text(out: u8[>..]&, a: i64, b: i64) { for i in a..b { push_utf8(out, ED_CP[i]); } }
 
-// Appends the code points ED_S[o..o+n] as UTF-8.
 fn ed_put_s(out: u8[>..]&, o: i64, n: i64) { for i in n { push_utf8(out, ED_S[o + i]); } }
 
 fn ed_error_json(out: u8[>..]&) {
@@ -205,17 +161,6 @@ fn ed_error_json(out: u8[>..]&) {
     out.push('}');
 }
 
-// --- Plan 9 regular expressions ------------------------------------------
-//
-//     .        any character except newline
-//     [abc]    a character class; [^abc] does not match newline
-//     ^ $      the start and the end of a line
-//     * + ?    zero or more, one or more, zero or one
-//     |        alternatives
-//     ( )      a group; \1 to \9 use it in a replacement
-//     \c       the character c; \n is newline, \t is tab
-//
-// The match is the leftmost-longest match, as in Plan 9.
 
 let RX_CHAR = 1;
 let RX_ANY = 2;
@@ -241,19 +186,15 @@ let N_STAR = 9;
 let N_PLUS = 10;
 let N_QUEST = 11;
 
-// An instruction. CHAR: a = code point. CLS, NCLS: a = first range in RX_CR,
-// b = number of ranges. SPLIT: a, b = targets. JMP: a = target. SAVE: a = slot.
 struct RxI { op: i64, a: i64, b: i64 }
-// A syntax node. Children are a list: child, then next; last is the last child.
 struct RxN { k: i64, a: i64, b: i64, neg: bool, child: i64, next: i64, last: i64 }
-// A compiled pattern: code RX_CODE[o..o+n], and its pattern RX_PATS[po..po+pn].
 struct Rx { o: i64, n: i64, groups: i64, icase: bool, po: i64, pn: i64 }
 
 var RX_CODE: RxI[>..] = [];
-var RX_CR: i64[>..] = [];     // class ranges: lo, hi
+var RX_CR: i64[>..] = [];
 var RX_N: RxN[>..] = [];
-var RX_J: i64[>..] = [];      // jumps to patch, for alternatives
-var RX_P: i64[>..] = [];      // the pattern to compile
+var RX_J: i64[>..] = [];
+var RX_P: i64[>..] = [];
 var RX_I = 0;
 var RX_G = 0;
 var RXS: Rx[>..] = [];
@@ -421,7 +362,6 @@ recursive fn rx_emit(n: i64) {
         return;
     }
     if k == N_ALT {
-        // split L1, next; L1: a; jmp end; next: split L2, ...
         let mark = RX_J.len;
         var c = x.child;
         while c >= 0 {
@@ -456,15 +396,12 @@ recursive fn rx_emit(n: i64) {
         rx_op(RX_SPLIT, start, s + 1);
         return;
     }
-    // N_QUEST
     let split = RX_CODE.len;
     rx_op(RX_SPLIT, split + 1, 0);
     rx_emit(x.child);
     RX_CODE[split].b = RX_CODE.len;
 }
 
-// Compiles the pattern in RX_P, or finds it when it is already compiled.
-// Returns the index in RXS, or -1 with the message in ED_ERR.
 fn rx_get(icase: bool) -> i64 {
     for r, ri in RXS {
         if r.icase == icase && r.pn == RX_P.len {
@@ -493,25 +430,20 @@ fn rx_get(icase: bool) -> i64 {
     return RXS.len - 1;
 }
 
-// --- matching (a Pike machine with leftmost-longest choice) ---------------
 
 var RX_MARK: i64[>..] = [];
 var RX_GEN = 0;
-// The current and the next thread lists: the program counter and the slots.
 var RX_CPC: i64[>..] = [];
 var RX_CCP: i64[>..] = [];
 var RX_NPC: i64[>..] = [];
 var RX_NCP: i64[>..] = [];
-// The slots of the thread that rx_add follows.
 var RX_CS: i64[>..] = [];
 var RX_BEST: i64[>..] = [];
 var RX_HAVE = false;
 var RX_O = 0;
 var RX_SLOTS = 0;
 var RX_IC = false;
-// The slots of the last match from rx_first. Slot 2g and 2g+1 are group g.
 var RX_M: i64[>..] = [];
-// Matches from rx_all, one after the other, RX_SLOTS each. A stack.
 var RX_ML: i64[>..] = [];
 
 fn rx_fold(c: i64) -> i64 { if RX_IC { ed_lower(c) } else { c } }
@@ -528,7 +460,6 @@ fn rx_cls(a: i64, n: i64, neg: bool, c: i64) -> bool {
     return hit != neg;
 }
 
-// Adds a thread to the next list. Its slots are RX_CS[cso..cso+RX_SLOTS].
 recursive fn rx_add(pc: i64, cso: i64, pos: i64) {
     let m = pc - RX_O;
     if RX_MARK[m] == RX_GEN { return; }
@@ -557,9 +488,6 @@ recursive fn rx_add(pc: i64, cso: i64, pos: i64) {
     for k in RX_SLOTS { let v = RX_CS[cso + k]; RX_NCP.push(v); }
 }
 
-// The leftmost-longest match in ED_CP that starts at or after `from` and ends
-// at or before `to` (-1: the end). `^` and `$` see the whole text, as in sam.
-// The slots go to RX_M.
 fn rx_first(r: i64, from: i64, to: i64) -> bool {
     let rx = RXS[r];
     let count = ED_CP.len;
@@ -581,7 +509,6 @@ fn rx_first(r: i64, from: i64, to: i64) -> bool {
     while true {
         if !RX_HAVE {
             RX_GEN++;
-            // A new start has the lowest priority: it goes at the end of the list.
             for i in RX_CPC.len { RX_MARK[RX_CPC[i] - RX_O] = RX_GEN; }
             for k in slots { RX_CS.push(-1); }
             rx_add(RX_O, 0, pos);
@@ -639,10 +566,6 @@ fn rx_first(r: i64, from: i64, to: i64) -> bool {
     return true;
 }
 
-// All matches in lo..hi, without overlap, pushed on RX_ML. An empty match
-// next to the previous match is skipped, as in sam. Returns the index of the
-// first match in RX_ML and the number of matches. The caller resizes RX_ML
-// back to that index when it is done.
 fn rx_all(r: i64, lo: i64, hi: i64) -> i64, i64 {
     let slots = 2 * (RXS[r].groups + 1);
     let mark = RX_ML.len;
@@ -654,7 +577,6 @@ fn rx_all(r: i64, lo: i64, hi: i64) -> i64, i64 {
         let s = RX_M[0];
         let e = RX_M[1];
         if s == e && s == last_end {
-            // Try again one character later.
             if s >= hi { break; }
             p = s + 1;
             continue;
@@ -669,9 +591,6 @@ fn rx_all(r: i64, lo: i64, hi: i64) -> i64, i64 {
     return mark, n;
 }
 
-// Sam's replacement text, appended to ED_S: & is the match, \1 to \9 are
-// groups, \n is a newline. The replacement is ED_S[ro..ro+rn], the match is at
-// RX_ML[mo..].
 fn rx_expand(ro: i64, rn: i64, mo: i64, groups: i64) {
     var i = 0;
     while i < rn {
@@ -707,9 +626,7 @@ fn rx_expand(ro: i64, rn: i64, mo: i64, groups: i64) {
     }
 }
 
-// --- Find and Replace ------------------------------------------------------
 
-// Puts the pattern in RX_P. Plain text escapes each pattern character.
 fn ed_pattern(pattern: u8[:], plain: bool) {
     RX_P.clear();
     each_utf8(pattern) {
@@ -789,33 +706,6 @@ fn edit_replace(out: u8[>..]&, text: u8[:], pattern: u8[:], plain: bool, ignore_
     out.push('}');
 }
 
-// --- sam ---------------------------------------------------------------
-//
-// Addresses select text:
-//
-//     #n       the empty position after n characters
-//     n        line n
-//     /re/     the next match after dot; ?re? the match before dot
-//     $  .     the end of the file; dot (the selection)
-//     a1,a2    from the start of a1 to the end of a2; "," alone is the whole file
-//     a1;a2    the same, but a2 starts at a1
-//     a+b a-b  b after or before a; "+" alone is the next line
-//
-// Commands act on dot:
-//
-//     x/re/ cmd    run cmd on each match in dot ("x cmd" loops over lines)
-//     y/re/ cmd    run cmd on each part between the matches
-//     g/re/ cmd    run cmd if dot has a match; v/re/ cmd if it has none
-//     s/re/text/   replace the first match; s/re/text/g replaces all
-//     c/text/  a/text/  i/text/   change, append, insert
-//     d            delete
-//     m addr  t addr   move or copy dot to after addr
-//     p  =         show the text, or the line numbers
-//     { cmds }     several commands, one on each line, on the same dot
-//
-// Each command runs on the text as it was at the start of the command. Its
-// changes are made at the end, together. Commands on separate lines run one
-// after the other.
 
 let A_LINE = 1;
 let A_CHAR = 2;
@@ -845,25 +735,19 @@ let C_PRINT = 13;
 let C_LINES = 14;
 let C_BLOCK = 15;
 
-// An address. LINE, CHAR: n. FWD, BACK: the pattern ED_S[so..so+sn].
-// CHAIN: the parts first, next, ... COMMA, SEMI: l and r (-1 when missing).
 struct SmA { k: i64, n: i64, so: i64, sn: i64, l: i64, r: i64, first: i64, next: i64, last: i64 }
-// A command. ro/rn: the pattern (ro = -1 for x without a pattern).
-// to/tn: the text or the replacement. inner: the command of x, y, g, v.
-// target: the address of m and t. first/last: the commands of a block.
 struct SmC { k: i64, addr: i64, ro: i64, rn: i64, to: i64, tn: i64, n: i64, glob: bool,
              inner: i64, target: i64, first: i64, next: i64, last: i64 }
-// A change: the range s..e of the text becomes ED_S[o..o+n].
 struct SmE { s: i64, e: i64, o: i64, n: i64, idx: i64 }
 
 var SM_A: SmA[>..] = [];
 var SM_C: SmC[>..] = [];
-var SM_P: i64[>..] = [];     // the command text
+var SM_P: i64[>..] = [];
 var SM_I = 0;
-var SM_TOP: i64[>..] = [];   // the commands of the program
+var SM_TOP: i64[>..] = [];
 var SM_E: SmE[>..] = [];
-var SM_PB: u8[>..] = [];     // printed text
-var SM_PS: i64[>..] = [];    // printed lines: offset, length in SM_PB
+var SM_PB: u8[>..] = [];
+var SM_PS: i64[>..] = [];
 var SM_IC = false;
 var SM_NEW: i64[>..] = [];
 var SM_ORIG: i64[>..] = [];
@@ -875,7 +759,6 @@ fn sm_is_ws(c: i64) -> bool {
     (c >= 0x2000 && c <= 0x200A) || c == 0x2028 || c == 0x2029 || c == 0x202F || c == 0x205F || c == 0x3000
 }
 fn sm_is_digit(c: i64) -> bool { c >= '0' && c <= '9' }
-// Letters: ASCII letters, and other characters outside the punctuation blocks.
 fn sm_is_letter(c: i64) -> bool {
     if c < 0x80 { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
     if c < 0xC0 || c == 0xD7 || c == 0xF7 { return false; }
@@ -894,8 +777,6 @@ fn sm_number() -> i64, bool {
     return n, true;
 }
 
-// Text up to the next delimiter, appended to ED_S. "\d" is the delimiter
-// itself. A missing last delimiter is allowed, as in sam.
 fn sm_delim(d: i64, keep: bool) -> i64, i64 {
     let o = ED_S.len;
     while true {
@@ -969,7 +850,6 @@ fn sm_simple() -> i64 {
             let lk = SM_A[SM_A[ch].last].k;
             if lk == A_PLUS || lk == A_MINUS || k == A_PLUS || k == A_MINUS {
             } else if k == A_LINE || k == A_CHAR || k == A_FWD || k == A_BACK {
-                // "a/re/" means "a+/re/".
                 sm_chain_add(ch, sm_addr_node(A_PLUS));
             } else {
                 ed_fail("Two addresses are next to each other. Put + or - between them.");
@@ -1109,7 +989,6 @@ fn sm_program() {
         let c = sm_command();
         if ED_ERR.len > 0 { return; }
         if SM_I == at {
-            // A "}" with no "{". The Swift parser does not stop here.
             ed_fail_c("Marklove does not know the command ", SM_P[at], ". Use x, y, g, v, s, c, a, i, d, m, t, p, or =.", -1, "", -1, "");
             return;
         }
@@ -1117,7 +996,6 @@ fn sm_program() {
     }
 }
 
-// --- sam addresses (after sam's address.c) ------------------------------
 
 fn sm_line(l: i64, a0: i64, a1: i64, sign: i64) -> i64, i64 {
     let n = ED_CP.len;
@@ -1187,7 +1065,6 @@ fn sm_char(l: i64, a0: i64, a1: i64, sign: i64) -> i64, i64 {
     return p1, p2;
 }
 
-// Compiles the pattern ED_S[o..o+n].
 fn sm_regex(o: i64, n: i64) -> i64 {
     RX_P.clear();
     for i in n { let v = ED_S[o + i]; RX_P.push(v); }
@@ -1293,7 +1170,6 @@ recursive fn sm_addr(ai: i64, d0: i64, d1: i64, b0: i64, b1: i64, sign: i64) -> 
             x0 = y0;
             x1 = y1;
         } else if k == A_BACK {
-            // As in sam: ? turns the direction around.
             var back = -sg;
             if back == 0 { back = -1; }
             let y0, y1 = sm_search(part.so, part.sn, if back >= 0 { x1 } else { x0 }, back >= 0);
@@ -1312,7 +1188,6 @@ fn sm_resolve(ai: i64, d0: i64, d1: i64) -> i64, i64 {
     return x0, x1;
 }
 
-// --- sam commands ----------------------------------------------------------
 
 fn sm_edit(s: i64, e: i64, o: i64, n: i64) {
     if SM_E.len >= MAX_MATCHES { ed_fail("There are too many changes. Make them in separate commands."); return; }
@@ -1335,7 +1210,6 @@ recursive fn sm_run(ci: i64, dot0: i64, dot1: i64) -> i64, i64 {
     if k == C_X || k == C_Y {
         var re = -1;
         if c.ro < 0 {
-            // With no pattern, x loops over lines. The last line counts also without a newline.
             RX_P.clear();
             RX_P.push('.');
             RX_P.push('*');
@@ -1441,7 +1315,6 @@ recursive fn sm_run(ci: i64, dot0: i64, dot1: i64) -> i64, i64 {
         sm_print_end(o);
         return d0, d1;
     }
-    // C_BLOCK
     var ch = c.first;
     while ch >= 0 {
         let y0, y1 = sm_run(ch, d0, d1);
@@ -1451,13 +1324,10 @@ recursive fn sm_run(ci: i64, dot0: i64, dot1: i64) -> i64, i64 {
     return d0, d1;
 }
 
-// Runs one command on ED_CP with the selection s0..s1. Makes the changes in
-// ED_CP. Returns the new selection and the number of changes.
 fn sm_run_one(ci: i64, s0: i64, s1: i64) -> i64, i64, i64 {
     SM_E.clear();
     let d0, d1 = sm_run(ci, s0, s1);
     if ED_ERR.len > 0 { return 0, 0, 0; }
-    // Changes in file order. Two changes may not overlap.
     sort(SM_E) { a, b => a.s < b.s || (a.s == b.s && a.idx < b.idx) };
     for i in 1..SM_E.len {
         if SM_E[i].s < SM_E[i - 1].e { ed_fail("Two changes overlap. Make the changes in separate commands."); return 0, 0, 0; }
@@ -1512,7 +1382,6 @@ fn edit_sam(out: u8[>..]&, command: u8[:], text: u8[:], sel_s: i64, sel_e: i64, 
     }
     var changed = ED_CP.len != SM_ORIG.len;
     if !changed { for j in ED_CP.len { if ED_CP[j] != SM_ORIG[j] { changed = true; break; } } }
-    // The new text and the byte offsets of the selection.
     var t: u8[>..] = [];
     var ba = 0;
     var bb = 0;
@@ -1552,26 +1421,20 @@ fn edit_sam(out: u8[>..]&, command: u8[:], text: u8[:], sel_s: i64, sel_e: i64, 
     out.push('}');
 }
 
-// --- line differences (the Myers algorithm) -------------------------------
 
-// The lines of the old text (a) and the new text (b): byte ranges.
 var LD_A: u8[>..] = [];
 var LD_B: u8[>..] = [];
 var LD_AS: i64[>..] = [];
 var LD_AE: i64[>..] = [];
 var LD_BS: i64[>..] = [];
 var LD_BE: i64[>..] = [];
-// Integer codes of the changed middle part, for the Myers algorithm.
 var LD_CA: i64[>..] = [];
 var LD_CB: i64[>..] = [];
-// Equal pairs from ld_myers, in order.
 var LD_PX: i64[>..] = [];
 var LD_PY: i64[>..] = [];
-// The Myers trace: for each d, v[k] for k in -(d+1)..d+1.
 var LD_TR: i64[>..] = [];
 var LD_TO: i64[>..] = [];
 var LD_V: i64[>..] = [];
-// The changes: old range, new range.
 var LD_CH: i64[>..] = [];
 
 fn ld_split(t: u8[:], s: i64[>..]&, e: i64[>..]&) {
@@ -1588,14 +1451,11 @@ fn ld_split(t: u8[:], s: i64[>..]&, e: i64[>..]&) {
 fn ld_a(i: i64) -> u8[:] { LD_A[LD_AS[i]..LD_AE[i]] }
 fn ld_b(i: i64) -> u8[:] { LD_B[LD_BS[i]..LD_BE[i]] }
 
-// A line of the joined list: a lines first, then b lines.
 fn ld_line(i: i64, na: i64, pre: i64) -> u8[:] {
     if i < na { return ld_a(pre + i); }
     return ld_b(pre + i - na);
 }
 
-// The equal pairs of a shortest edit script of LD_CA and LD_CB into LD_PX and
-// LD_PY, or false when the texts are too different for a fast answer.
 fn ld_myers(max_cost: i64) -> bool {
     let n = LD_CA.len;
     let m = LD_CB.len;
@@ -1628,14 +1488,13 @@ fn ld_myers(max_cost: i64) -> bool {
         d++;
     }
     if !found { return false; }
-    // Walk back through the trace to find the equal pairs.
     LD_PX.clear();
     LD_PY.clear();
     var x = n;
     var y = m;
     var dd = LD_TO.len - 1;
     while dd >= 0 {
-        let base = LD_TO[dd] + dd + 1;   // the index of k = 0
+        let base = LD_TO[dd] + dd + 1;
         let k = x - y;
         var prev_k = 0;
         if k == -dd || (k != dd && LD_TR[base + k - 1] < LD_TR[base + k + 1]) { prev_k = k + 1; } else { prev_k = k - 1; }
@@ -1655,7 +1514,6 @@ fn ld_myers(max_cost: i64) -> bool {
     return true;
 }
 
-// The changed regions into LD_CH: old start, old end, new start, new end.
 fn ld_changes() {
     LD_CH.clear();
     let na = LD_AS.len;
@@ -1671,7 +1529,6 @@ fn ld_changes() {
         LD_CH.push(prefix); LD_CH.push(prefix + ca); LD_CH.push(prefix); LD_CH.push(prefix + cb);
         return;
     }
-    // Integer codes compare faster than strings.
     var idx: i64[>..] = [];
     for i in ca + cb { idx.push(i); }
     sort(idx) { p, q => compare(ld_line(p, ca, prefix), ld_line(q, ca, prefix)) < 0 };
@@ -1743,16 +1600,6 @@ fn edit_diff(out: u8[>..]&, old: u8[:], new: u8[:]) {
     out.push(']');
 }
 
-// --- commit messages -------------------------------------------------------
-//
-// Commit messages that say what changed in the presentation: slides and
-// sections added, edited, renamed, moved, or removed, and front matter.
-//
-//     Add slide “Wave speed”, edit 2 slides
-//
-//     - Add slide “Wave speed”
-//     - Edit slide “The heat equation”
-//     - Edit slide “Summary”
 
 let CV_ADD = 0;
 let CV_EDIT = 1;
@@ -1761,13 +1608,12 @@ let CV_RENAME = 3;
 let CV_MOVE = 4;
 let CV_CHANGE = 5;
 
-let CN_TITLE = 0;     // title slide
+let CN_TITLE = 0;
 let CN_SECTION = 1;
 let CN_SLIDE = 2;
-let CN_FRONT = 3;     // front matter
+let CN_FRONT = 3;
 let CN_TEXT = 4;
 
-// A slide or a section: its kind, title and body text in CM_S.
 struct CmPart { kind: i64, to: i64, tn: i64, bo: i64, bn: i64 }
 struct CmKV { ko: i64, kn: i64, vo: i64, vn: i64 }
 struct CmItem { verb: i64, noun: i64, to: i64, tn: i64 }
@@ -1806,7 +1652,6 @@ fn cm_kind_noun(k: i64) -> i64 {
     return CN_SLIDE;
 }
 
-// Parses one version and copies its parts and its front matter.
 fn cm_read(text: u8[:], parts: CmPart[>..]&, kv: CmKV[>..]&) {
     reset();
     SRC.clear();
@@ -1818,7 +1663,6 @@ fn cm_read(text: u8[:], parts: CmPart[>..]&, kv: CmKV[>..]&) {
         let to = CM_S.len;
         if f.kind == F_TITLE { CM_S.append("Title slide"); } else { CM_S.append(sp_text(f.title)); }
         let tn = CM_S.len - to;
-        // The body: the source of the blocks, without blank lines.
         var body: u8[>..] = [];
         let src = SRC[f.hs1..max(f.hs1, f.s1)];
         var p = 0;
@@ -1838,7 +1682,6 @@ fn cm_read(text: u8[:], parts: CmPart[>..]&, kv: CmKV[>..]&) {
         CM_S.append(trim_all(body));
         parts.push(CmPart { kind: f.kind, to: to, tn: tn, bo: bo, bn: CM_S.len - bo });
     }
-    // The front matter: the last value of each key.
     var i = META.len - 1;
     while i >= 0 {
         let k = sp_text(META[i].k);
@@ -1860,7 +1703,6 @@ fn cm_find(kv: CmKV[:], key: u8[:]) -> i64 {
     return -1;
 }
 
-// “text”, with at most 48 characters.
 fn cm_quoted(out: u8[>..]&, s: u8[:]) {
     out.append("“");
     if char_count(s) > 48 {
@@ -1878,7 +1720,6 @@ fn cm_quoted(out: u8[>..]&, s: u8[:]) {
     out.append("”");
 }
 
-// "slide “Two”", or "the title slide".
 fn cm_name(out: u8[>..]&, p: CmPart) {
     if p.kind == F_TITLE { out.append("the title slide"); return; }
     out.append(cm_noun(cm_kind_noun(p.kind)));
@@ -1888,7 +1729,6 @@ fn cm_name(out: u8[>..]&, p: CmPart) {
 
 fn cm_item(verb: i64, noun: i64, to: i64) { CM_IT.push(CmItem { verb: verb, noun: noun, to: to, tn: CM_S.len - to }); }
 
-// The display name of a theme for a front matter value, as Theme.named.
 fn cm_theme_name(out: u8[>..]&, value: u8[:]) {
     let ids: (const u8[:])[20] = ["selenized", "catppuccin", "catppuccin-frappe", "catppuccin-macchiato", "everforest",
         "gruvbox", "solarized", "github", "tokyo-night", "tokyo-night-storm", "rose-pine", "rose-pine-moon", "ayu",
@@ -1901,7 +1741,6 @@ fn cm_theme_name(out: u8[>..]&, value: u8[:]) {
         "ayu-dark", "ayu-light", "one-dark", "one-light", "one-dark-pro", "atom-one", "one-half-dark", "one-half-light",
         "alucard", "dracula-light", "light-owl", "monokai-pro", "github-light", "github-dark", ""];
     let alias_id: i64[26] = [1, 1, 1, 1, 8, 8, 8, 8, 9, 10, 10, 12, 12, 14, 14, 14, 14, 14, 14, 15, 15, 17, 16, 7, 7, 0];
-    // Lower case, with - for spaces and underscores.
     var v: u8[>..] = [];
     for c in trim_sp(value) {
         if c == ' ' || c == '_' { v.push('-'); } else { v.push(lower(c)); }
@@ -1915,15 +1754,12 @@ fn cm_theme_name(out: u8[>..]&, value: u8[:]) {
             return;
         }
     }
-    // A longer name that starts with a theme id, such as gruvbox-material.
     var best = -1;
     for id, i in ids { if has_prefix(v, id) && (best < 0 || id.len > ids[best].len) { best = i; } }
     out.append(names[if best < 0 { 0 } else { best }]);
 }
 
-// Slide and section changes between two versions of the Markdown, into CM_IT.
 fn cm_changes(old: u8[:], new: u8[:]) {
-    // Front matter.
     var keys: (const u8[:])[>..] = [];
     for x in CM_MA { keys.push(cm_text(x.ko, x.kn)); }
     for x in CM_MB { if cm_find(CM_MA, cm_text(x.ko, x.kn)) < 0 { keys.push(cm_text(x.ko, x.kn)); } }
@@ -1961,7 +1797,6 @@ fn cm_changes(old: u8[:], new: u8[:]) {
         cm_item(CV_CHANGE, CN_FRONT, to);
     }
 
-    // Match by kind and title, in order.
     var unmatched_old: i64[>..] = [];
     for i in CM_PA.len { unmatched_old.push(i); }
     var pair_a: i64[>..] = [];
@@ -1980,7 +1815,6 @@ fn cm_changes(old: u8[:], new: u8[:]) {
             unmatched_new.push(j);
         }
     }
-    // A new title with the same content is a rename.
     var ren_a: i64[>..] = [];
     var ren_b: i64[>..] = [];
     var added: i64[>..] = [];
@@ -2033,7 +1867,6 @@ fn cm_changes(old: u8[:], new: u8[:]) {
         CM_S.append(t);
         cm_item(CV_EDIT, cm_kind_noun(pb.kind), to);
     }
-    // Moved: matched parts outside the longest increasing run.
     var order: i64[>..] = [];
     for r in pair_a.len { order.push(r); }
     sort(order) { x, y => pair_a[x] < pair_a[y] };
@@ -2067,7 +1900,6 @@ fn cm_changes(old: u8[:], new: u8[:]) {
     }
 }
 
-// For example: "Add 2 slides, edit 3 slides".
 fn cm_summarize(out: u8[>..]&) {
     var keys: i64[>..] = [];
     var counts: i64[>..] = [];

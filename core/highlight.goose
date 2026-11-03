@@ -1,21 +1,7 @@
-// Syntax highlights, as the app's Text/Highlighter.swift: CodeHighlighter for
-// code blocks, and MarkdownHighlighter for the Markdown source in the editor.
-//
-// Public functions:
-//   highlight_html(out, code, lang)
-//       The HTML of HTMLWriter.highlightCode: the code, escaped, with
-//       <span class="kw|str|num|com|type|fn|attr"> around the tokens. Lines
-//       stay separated by "\n". An unknown language gets no spans.
-//   highlight_markdown(out, src)
-//       JSON array of [start, end, "role"] for the editor. Offsets are UTF-8
-//       byte offsets in src. Spans overlap: apply them in order, so that a
-//       later span wins. The role names are the keys of "roles" in
-//       theme_palette (theme.goose), such as "heading" or "keyword".
 
 import base;
 import parse;
 
-// Highlight roles (HighlightRole). The numbers index HL_ROLES.
 let HR_HEADING_MARKER = 0;
 let HR_HEADING = 1;
 let HR_EMPHASIS_MARKER = 2;
@@ -53,12 +39,10 @@ let HL_ROLES: (const u8[:])[] = [
     "codeComment", "type", "function", "attribute",
 ];
 
-// A highlight: bytes a..b and a role.
 struct HSpan { a: i64, b: i64, r: i64 }
 
 fn hl_add(spans: HSpan[>..]&, a: i64, b: i64, r: i64) { spans.push(HSpan { a, b, r }); }
 
-// --- code ---------------------------------------------------------------
 
 let HL_CLIKE: (const u8[:])[] = ["if", "else", "for", "while", "do", "switch", "case", "default", "break", "continue", "return", "goto", "struct", "enum", "union", "typedef", "static", "const", "void", "int", "char", "float", "double", "long", "short", "unsigned", "signed", "sizeof", "true", "false", "null", "nullptr", "class", "public", "private", "protected", "new", "delete", "this", "try", "catch", "throw", "namespace", "using", "template", "virtual", "override", "final", "import", "package", "extends", "implements", "interface", "abstract", "var", "let", "func", "fn", "mut", "impl", "trait", "pub", "use", "mod", "match", "loop", "in", "as", "self", "Self", "super", "where", "guard", "defer", "init", "deinit", "throws", "rethrows", "async", "await", "inout", "some", "any", "protocol", "extension", "typealias", "associatedtype", "nil", "is", "lazy", "weak", "unowned", "fileprivate", "internal", "open", "mutating", "nonmutating", "subscript", "operator", "get", "set", "willSet", "didSet", "function", "export", "from", "of", "typeof", "instanceof", "yield", "undefined", "go", "chan", "select", "type", "map", "range", "val", "fun", "when", "object", "data", "sealed", "companion", "crate", "dyn", "ref", "move", "unsafe", "auto", "register", "volatile", "extern", "inline", "bool", "string"];
 let HL_PYTHON: (const u8[:])[] = ["False", "None", "True", "and", "as", "assert", "async", "await", "break", "class", "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield", "match", "case", "self", "print"];
@@ -83,7 +67,6 @@ let HG_MATLAB = 9;
 let HG_R = 10;
 let HG_JULIA = 11;
 
-// A grammar (CodeHighlighter.Grammar). `strings` lists the quote bytes.
 struct HGram {
     kind: i64,
     line_comment: const u8[:],
@@ -143,8 +126,6 @@ fn hl_is_keyword(g: HGram, word: u8[:]) -> bool {
     return false;
 }
 
-// Character classes of code points. Swift's Character classes are Unicode
-// wide; outside ASCII these are close approximations.
 fn hl_letter(c: i64) -> bool {
     if c < 0x80 { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
     if c < 0xC0 { return c == 0xAA || c == 0xB5 || c == 0xBA; }
@@ -162,7 +143,6 @@ fn hl_hex(c: i64) -> bool { hl_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' &
 fn hl_upper(c: i64) -> bool {
     (c >= 'A' && c <= 'Z') || (c >= 0xC0 && c <= 0xDE && c != 0xD7) || (c >= 0x391 && c <= 0x3A9) || (c >= 0x400 && c <= 0x42F)
 }
-// A letter, a digit, `_`, or a mark that joins the character before it.
 fn hl_word(c: i64) -> bool { hl_letter(c) || hl_digit(c) || c == '_' || hl_combining(c) }
 
 fn hl_decode(s: u8[:], i: i64) -> i64 {
@@ -174,7 +154,6 @@ fn hl_decode(s: u8[:], i: i64) -> i64 {
     return v;
 }
 
-// TeX: `%` comments and control sequences.
 fn hl_tex_line(line: u8[:], base: i64, spans: HSpan[>..]&) {
     var i = 0;
     while i < line.len {
@@ -191,13 +170,10 @@ fn hl_tex_line(line: u8[:], base: i64, spans: HSpan[>..]&) {
     }
 }
 
-// CodeHighlighter.highlight: one line of code. Spans are byte offsets in
-// the line plus `base`. Block comments that span lines are per line only.
 fn hl_code_line(line: u8[:], lang: u8[:], base: i64, spans: HSpan[>..]&) {
     let g = hl_grammar(lang);
     if g.kind == HG_NONE { return; }
     if g.kind == HG_TEX { hl_tex_line(line, base, spans); return; }
-    // Code points and their byte offsets; off has one more entry at the end.
     var cp: i64[>..] = [];
     var off: i64[>..] = [];
     var p = 0;
@@ -273,7 +249,6 @@ fn hl_code_line(line: u8[:], lang: u8[:], base: i64, spans: HSpan[>..]&) {
     }
 }
 
-// MathMLConverter.escapeXML: & < > and ".
 fn hl_esc(out: u8[>..]&, s: u8[:]) {
     for c in s {
         if c == '&' { out.append("&amp;"); }
@@ -323,11 +298,9 @@ fn highlight_html(out: u8[>..]&, code: u8[:], lang: u8[:]) {
     }
 }
 
-// --- Markdown -----------------------------------------------------------
 
 fn hl_alnum(c: u8) -> bool { is_alnum(c) || c > 0x7F }
 
-// Inline markers: emphasis, code spans, math, links and images.
 recursive fn hl_inline(u: u8[:], base: i64, spans: HSpan[>..]&) {
     fn span(a: i64, len: i64, r: i64) { if len > 0 { hl_add(spans, base + a, base + a + len, r); } }
     var i = 0;
@@ -343,7 +316,6 @@ recursive fn hl_inline(u: u8[:], base: i64, spans: HSpan[>..]&) {
                     continue;
                 }
             }
-            // The backslash and the whole character after it.
             let n = if i + 1 < u.len { 1 + utf8_len(u[i + 1]) } else { 1 };
             span(i, min(n, u.len - i), HR_ESCAPE);
             i += max(n, 2);
@@ -410,7 +382,6 @@ recursive fn hl_inline(u: u8[:], base: i64, spans: HSpan[>..]&) {
                 }
                 if k < u.len {
                     if image { span(start, 2, HR_IMAGE_MARKER); } else { span(start, 1, HR_LINK); }
-                    // The text keeps its inline highlights.
                     hl_inline(u[bracket + 1..close], base + bracket + 1, spans);
                     span(close, 1, if image { HR_IMAGE_MARKER } else { HR_LINK });
                     span(close + 1, k - close, HR_URL);
@@ -437,9 +408,7 @@ fn hl_blank(t: u8[:]) -> bool {
     return true;
 }
 
-// MarkdownHighlighter.highlight. Spans are byte offsets in src.
 fn hl_markdown(src: u8[:], spans: HSpan[>..]&) {
-    // Lines, as sourceLines: "\n" and "\r\n" end a line.
     var ls: i64[>..] = [];
     var le: i64[>..] = [];
     var s = 0;
@@ -455,7 +424,6 @@ fn hl_markdown(src: u8[:], spans: HSpan[>..]&) {
     let count = ls.len;
     fn whole(i: i64, r: i64) { hl_add(spans, ls[i], le[i], r); }
     var i = 0;
-    // Front matter.
     if trim_sp(src[ls[0]..le[0]]) == "---" {
         var j = 1;
         while j < count {
@@ -559,7 +527,6 @@ fn hl_markdown(src: u8[:], spans: HSpan[>..]&) {
             whole(n, HR_RULE);
             continue;
         }
-        // Block quote markers.
         var cs = 0;
         loop {
             var lead = 0;
@@ -578,7 +545,6 @@ fn hl_markdown(src: u8[:], spans: HSpan[>..]&) {
             continue;
         }
         hl_inline(t[cs..], o + cs, spans);
-        // Table bars.
         if has_prefix(trimmed, "|") {
             for c, k in t { if c == '|' { hl_add(spans, o + k, o + k + 1, HR_TABLE_BAR); } }
         }

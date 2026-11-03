@@ -1,15 +1,6 @@
-// The Markdown parser: front matter, blocks, inlines, and frames.
-//
-// The parser follows the app's MarkdownParser, BlockParser and InlineParser.
-// The document is one flat list of events in `EV`. A container (paragraph,
-// list, division, link, emphasis) is an open event, its content, and a close
-// event. Each open event's `end` is the index after its close event, so a
-// walk can jump over a whole block. A leaf event (code, math, figure, text)
-// has `end` = its own index + 1.
 
 import base;
 
-// Block events.
 let K_PARA = 1;
 let K_HEAD = 2;
 let K_LIST = 3;
@@ -25,7 +16,6 @@ let K_RULE = 12;
 let K_PAUSE = 13;
 let K_DIV = 14;
 let K_RAW = 15;
-// Inline events.
 let I_TEXT = 20;
 let I_EM = 21;
 let I_STRONG = 22;
@@ -38,7 +28,6 @@ let I_SOFT = 28;
 let I_HARD = 29;
 let I_HTML = 30;
 
-// Division kinds (the `n` of a K_DIV event).
 let D_BOX = 1;
 let D_COLUMNS = 2;
 let D_COLUMN = 3;
@@ -51,30 +40,18 @@ let D_PUBLIC = 9;
 let D_EXPLAIN = 10;
 let D_UNKNOWN = 11;
 
-// Media kinds (the `n` of a K_FIG event).
 let M_IMAGE = 0;
 let M_VIDEO = 1;
 let M_AUDIO = 2;
 
-// Scopes from `<!-- article -->` and `<!-- slides -->`.
 let SC_NONE = 0;
 let SC_ARTICLE = 1;
 let SC_SLIDES = 2;
 
-// Frame kinds.
 let F_TITLE = 0;
 let F_SECTION = 1;
 let F_FRAME = 2;
 
-// Event fields by kind:
-//   K_HEAD: n = level.  K_LIST: n = start, fl = 1 ordered + 2 tight.
-//   K_ITEM: fl = 0 plain, 1 unchecked, 2 checked.  K_CODE: a = text, b = language.
-//   K_MATH, I_MATH: a = LaTeX.  K_ROW: fl = 1 for the header row.
-//   K_CELL: fl = 0 none, 1 left, 2 center, 3 right.
-//   K_FIG: a = description, b = path, c = caption, n = media kind, fl = 1 decorative.
-//   K_DIV: n = division kind, a = title, b = name, c = raw text, fl = 1 unclosed.
-//   K_RAW, I_TEXT, I_CODE, I_HTML: a = text.  I_LINK: b = URL, c = title.
-//   I_IMG: a = description, b = URL, c = title.
 struct Ev {
     k: i64,
     close: bool,
@@ -93,25 +70,21 @@ struct Line { s: i64, e: i64 }
 
 struct Meta { k: Span, v: Span }
 
-// A structural problem. kind: 1 unclosed division (a = name), 2 unclosed
-// fence, 3 unclosed math, 4 unclosed scope, 5 stray scope end, 6 nested
-// scope, 7 unclosed comment, 8 unclosed front matter.
 struct Issue { kind: i64, s0: i64, s1: i64, a: Span, scope: i64 }
 
-// An inline element with its source range. kind: 1 math, 2 image, 3 link.
 struct Anchor { kind: i64, a: Span, b: Span, s0: i64, s1: i64 }
 
 struct Frame {
     kind: i64,
-    head: i64,       // the heading event, or -1
-    lo: i64,         // the body: top-level events lo..hi
+    head: i64,
+    lo: i64,
     hi: i64,
-    s0: i64,         // the heading and its body in the source
+    s0: i64,
     s1: i64,
-    hs0: i64,        // the heading line
+    hs0: i64,
     hs1: i64,
     id: Span,
-    title: Span,     // plain text
+    title: Span,
     section: Span,
     scope: i64,
 }
@@ -122,7 +95,6 @@ var META: Meta[>..] = [];
 var ISS: Issue[>..] = [];
 var ANC: Anchor[>..] = [];
 var FR: Frame[>..] = [];
-// UTF-16 offset of each byte of the source, for the editor.
 var U16: i32[>..] = [];
 var FRONT_S0 = -1;
 var FRONT_S1 = -1;
@@ -146,7 +118,6 @@ fn ev_close(i: i64) {
 
 fn issue(kind: i64, s0: i64, s1: i64) { ISS.push(Issue { kind: kind, s0: s0, s1: s1, a: Span { 0, 0 }, scope: 0 }); }
 
-// --- front matter -------------------------------------------------------
 
 fn meta(key: u8[:]) -> u8[:] {
     var i = META.len - 1;
@@ -187,7 +158,6 @@ fn parse_front_line(t: u8[:]) {
     META.push(Meta { k: k, v: sp_add(v) });
 }
 
-// --- lines --------------------------------------------------------------
 
 fn ln_text(l: Line) -> u8[:] { SRC[l.s..l.e] }
 
@@ -207,7 +177,6 @@ fn ln_indent(l: Line) -> i64 {
     return col;
 }
 
-// Removes up to n columns of leading white space.
 fn ln_drop_indent(l: Line, n: i64) -> Line {
     var col = 0;
     var i = l.s;
@@ -223,7 +192,6 @@ fn ln_drop(l: Line, k: i64) -> Line { Line { min(l.s + k, l.e), l.e } }
 
 fn ln_trim(l: Line) -> u8[:] { trim_sp(ln_text(l)) }
 
-// --- line classes -------------------------------------------------------
 
 struct Fence { ch: u8, len: i64, info: const u8[:], ok: bool }
 
@@ -253,7 +221,6 @@ fn is_fence_close(t: u8[:], ch: u8, len: i64) -> bool {
 
 struct Atx { level: i64, a: i64, b: i64, ok: bool }
 
-// An ATX heading: the level and the content as offsets in t.
 fn atx(t: u8[:]) -> Atx {
     var i = 0;
     while i < t.len && t[i] == ' ' { i++; }
@@ -267,7 +234,6 @@ fn atx(t: u8[:]) -> Atx {
     while a < t.len && (t[a] == ' ' || t[a] == '\t') { a++; }
     var b = t.len;
     while b > a && (t[b - 1] == ' ' || t[b - 1] == '\t' || t[b - 1] == '\r') { b--; }
-    // An optional closing sequence of #.
     var k = b;
     while k > a && t[k - 1] == '#' { k--; }
     if k < b && (k == a || t[k - 1] == ' ' || t[k - 1] == '\t') {
@@ -363,8 +329,8 @@ struct Marker {
     bullet: u8,
     delim: u8,
     start: i64,
-    indent: i64,     // columns from the line start to the content
-    chars: i64,      // bytes from the line start to the content
+    indent: i64,
+    chars: i64,
     empty: bool,
     ok: bool,
 }
@@ -416,7 +382,6 @@ fn is_quote(t: u8[:]) -> bool {
     return i <= 3 && i < t.len && t[i] == '>';
 }
 
-// The text of `<!-- text -->` on one line, in lower case, or "".
 fn directive(out: u8[>..]&, t0: u8[:]) -> bool {
     let t = trim_all(t0);
     if !has_prefix(t, "<!--") || !has_suffix(t, "-->") || t.len < 7 { return false; }
@@ -424,8 +389,6 @@ fn directive(out: u8[>..]&, t0: u8[:]) -> bool {
     return true;
 }
 
-// Splits a table row into cells, as slices of t. Escaped pipes stay in the
-// cell text; the inline parser reads `\|` as `|`.
 fn table_cells(t0: u8[:]) -> const u8[:][>..] {
     var t = trim_all(t0);
     if t.len > 0 && t[0] == '|' { t = t[1..]; }
@@ -444,8 +407,6 @@ fn table_cells(t0: u8[:]) -> const u8[:][>..] {
     return cells;
 }
 
-// The alignments of a delimiter row (0 none, 1 left, 2 center, 3 right),
-// or an empty array when the line is not a delimiter row.
 fn delimiter_row(t: u8[:]) -> i64[>..] {
     var out: i64[>..] = [];
     if !contains_byte(t, '-') { return out; }
@@ -513,9 +474,7 @@ fn media_kind(path: u8[:]) -> i64 {
     return M_IMAGE;
 }
 
-// --- blocks -------------------------------------------------------------
 
-// Lines lo..hi of LN are one block container's lines.
 recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
     var i = lo;
     var scope = SC_NONE;
@@ -529,7 +488,6 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
         let text = ln_text(line);
         let sc = if scope != SC_NONE { scope } else { inherited };
 
-        // Indented code.
         if ln_indent(line) >= 4 {
             var j = i;
             while j < hi && (ln_blank(LN[j]) || ln_indent(LN[j]) >= 4) { j++; }
@@ -545,7 +503,6 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
             continue;
         }
 
-        // Fenced code.
         let f = fence(text);
         if f.ok {
             let fi = ln_indent(line);
@@ -571,7 +528,6 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
 
         let trimmed = ln_trim(line);
 
-        // Display math.
         if has_prefix(trimmed, "$$") || has_prefix(trimmed, "\\[") {
             let dollars = trimmed[0] == '$';
             let close = if dollars { "$$" } else { "\\]" };
@@ -605,7 +561,6 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
             continue;
         }
 
-        // Fenced division.
         let d = div_open(text);
         if d.ok {
             let kind = div_kind(d.name);
@@ -645,7 +600,6 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
             let no = S.len;
             for c in d.name { S.push(lower(c)); }
             EV[e].b = Span { no, d.name.len };
-            // The raw text, without leading and trailing new lines.
             let o = S.len;
             for k in i + 1..j {
                 if k > i + 1 { S.push('\n'); }
@@ -663,10 +617,8 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
             continue;
         }
 
-        // A stray division close.
         if is_div_close(text) { i++; continue; }
 
-        // HTML comments: scope markers, the decorative marker, and comments.
         if has_prefix(trimmed, "<!--") {
             var j = i;
             var closed = false;
@@ -700,14 +652,12 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
             continue;
         }
 
-        // Pause.
         if is_pause(text) {
             ev_push(K_PAUSE, line.s, line.e, sc);
             i++;
             continue;
         }
 
-        // ATX heading.
         let h = atx(text);
         if h.ok {
             let e = ev_push(K_HEAD, line.s, line.e, sc);
@@ -723,14 +673,12 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
             continue;
         }
 
-        // Thematic break.
         if is_rule(text) {
             ev_push(K_RULE, line.s, line.e, sc);
             i++;
             continue;
         }
 
-        // Block quote.
         if is_quote(text) {
             var j = i;
             let first = LN.len;
@@ -757,14 +705,12 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
             continue;
         }
 
-        // List.
         let m = list_marker(text);
         if m.ok {
             i = parse_list(i, hi, m, sc);
             continue;
         }
 
-        // Table.
         if contains_byte(text, '|') && i + 1 < hi {
             let aligns = delimiter_row(ln_text(LN[i + 1]));
             if aligns.len > 0 {
@@ -783,7 +729,6 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
             }
         }
 
-        // Raw HTML block.
         if is_html_block_start(text) {
             var j = i;
             while j < hi && !ln_blank(LN[j]) { j++; }
@@ -798,7 +743,6 @@ recursive fn parse_blocks(lo: i64, hi: i64, inherited: i64) {
             continue;
         }
 
-        // Paragraph, with setext headings.
         var j = i;
         var setext = 0;
         while j < hi {
@@ -867,7 +811,6 @@ fn table_row(l: Line, aligns: i64[:], header: bool, sc: i64) {
         EV[e].fl = aligns[k];
         if k < cells.len {
             let o = S.len;
-            // As Swift's tableCells: "\\|" becomes "|" in each cell.
             let cell = cells[k];
             var ci = 0;
             while ci < cell.len {
@@ -878,7 +821,6 @@ fn table_row(l: Line, aligns: i64[:], header: bool, sc: i64) {
             SEG.clear();
             SEG.push(Seg { 0, l.s });
             inline_parse(o, S.len - o);
-            // Cell offsets are approximate: anchors point at the row.
             for &a in ANC[ANC_MARK..] { a.s0 = l.s; a.s1 = l.e; }
             inline_emit();
         }
@@ -936,7 +878,6 @@ fn parse_list(start: i64, hi: i64, first: Marker, sc: i64) -> i64 {
             }
             break;
         }
-        // A task item.
         var checked = 0;
         let fl = LN[firstln];
         let ft = ln_text(fl);
@@ -949,7 +890,6 @@ fn parse_list(start: i64, hi: i64, first: Marker, sc: i64) -> i64 {
         EV[it].fl = checked;
         let before = EV.len;
         parse_blocks(firstln, LN.len, sc);
-        // More than one child block after a blank line makes a loose list.
         var children = 0;
         var c = before;
         while c < EV.len { children++; c = EV[c].end; }
@@ -975,7 +915,6 @@ fn parse_list(start: i64, hi: i64, first: Marker, sc: i64) -> i64 {
     return i;
 }
 
-// --- inlines ------------------------------------------------------------
 
 let T_TEXT = 1;
 let T_DELIM = 2;
@@ -985,13 +924,13 @@ let T_LCLOSE = 5;
 
 struct Tok {
     k: i64,
-    ek: i64,       // the event kind of an atom
+    ek: i64,
     ch: u8,
     cnt: i64,
     op: bool,
     cl: bool,
     act: bool,
-    partner: i64,  // the other end of a link
+    partner: i64,
     a: Span,
     b: Span,
     c: Span,
@@ -999,7 +938,6 @@ struct Tok {
 
 struct Match { o: i64, c: i64, kind: i64 }
 
-// Maps offsets of joined paragraph text to source offsets.
 struct Seg { j: i64, s: i64 }
 
 var TK: Tok[>..] = [];
@@ -1058,7 +996,6 @@ struct LinkM { close: i64, url: Span, title: Span, end: i64, ok: bool }
 
 fn no_link() -> LinkM { LinkM { 0, Span { 0, 0 }, Span { 0, 0 }, 0, false } }
 
-// `[text](url "title")` at `start`, which is the `[`. Offsets are in t.
 fn link_like(t: u8[:], start: i64, to: i64) -> LinkM {
     var depth = 0;
     var i = start;
@@ -1133,7 +1070,6 @@ fn link_like(t: u8[:], start: i64, to: i64) -> LinkM {
     return LinkM { close, url, title, j + 1, true };
 }
 
-// The plain text of link text, for an image description.
 fn plain_of(t: u8[:]) -> Span {
     let o = S.len;
     var i = 0;
@@ -1191,13 +1127,11 @@ fn add_anchor(kind: i64, a: Span, b: Span, j0: i64, j1: i64) {
     ANC.push(Anchor { kind: kind, a: a, b: b, s0: map_off(j0), s1: map_off(j1) });
 }
 
-// Scans S[o..o + n] into tokens in TK and resolves emphasis into MT.
 fn inline_parse(o: i64, n: i64) {
     TK.clear();
     MT.clear();
     ANC_MARK = ANC.len;
     var buf: u8[>..] = [];
-    // Pending link ends: the `]` offset and the offset after `)`.
     var lclose: i64[>..<] = [];
     var lend: i64[>..<] = [];
     var lopen: i64[>..<] = [];
@@ -1427,7 +1361,6 @@ fn inline_parse(o: i64, n: i64) {
         }
     }
     flush();
-    // Links whose `]` was never reached (it cannot happen for a valid match).
     while lopen.len > 0 {
         var t = tok(T_LCLOSE);
         t.partner = lopen.pop();
@@ -1439,8 +1372,6 @@ fn inline_parse(o: i64, n: i64) {
     resolve_emphasis();
 }
 
-// Inline math with the Pandoc rules. Returns the LaTeX and the offset after
-// the closing `$`, or an end of 0.
 fn inline_math(t: u8[:], i: i64, to: i64) -> Span, i64 {
     if i + 1 < to && t[i + 1] == '$' {
         var j = i + 2;
@@ -1509,7 +1440,6 @@ fn resolve_emphasis() {
     }
 }
 
-// The token of an image that stands alone in its paragraph, or -1.
 fn inline_figure() -> i64 {
     var img = -1;
     for t, i in TK {
@@ -1530,7 +1460,6 @@ fn emit_text(sp: Span) {
     EV[e].a = sp;
 }
 
-// Turns the tokens in TK into inline events.
 fn inline_emit() {
     var stack: i64[>..<] = [];
     for t, ti in TK {
@@ -1553,7 +1482,6 @@ fn inline_emit() {
             if stack.len > 0 { ev_close(stack.pop()); }
             continue;
         }
-        // A delimiter: the closes, the unused characters, then the opens.
         for m in MT {
             if m.c == ti && stack.len > 0 { ev_close(stack.pop()); }
         }
@@ -1571,8 +1499,6 @@ fn inline_emit() {
     while stack.len > 0 { ev_close(stack.pop()); }
 }
 
-// Parses inline Markdown text that is not in the source, such as a box
-// title or a Takahashi sentence, into events at the end of EV.
 fn inline_text(t: u8[:]) -> i64, i64 {
     let o = S.len;
     S.append(t);
@@ -1585,7 +1511,6 @@ fn inline_text(t: u8[:]) -> i64, i64 {
     return lo, EV.len;
 }
 
-// --- the document -------------------------------------------------------
 
 fn reset() {
     EV.clear();
@@ -1601,7 +1526,6 @@ fn reset() {
     FRONT_S1 = -1;
 }
 
-// Reads the source from argument 0 and parses it.
 fn load() {
     reset();
     SRC.clear();
@@ -1610,7 +1534,6 @@ fn load() {
 }
 
 fn parse_source() {
-    // UTF-16 offsets, for the editor.
     var u = 0;
     for c in SRC {
         U16.push(u as i32);
@@ -1618,7 +1541,6 @@ fn parse_source() {
         if (c & 0xF8) == 0xF0 { u++; }
     }
     U16.push(u as i32);
-    // Lines.
     var s = 0;
     if SRC.len >= 3 && SRC[0] == 0xEF && SRC[1] == 0xBB && SRC[2] == 0xBF { s = 3; }
     let first_line = s;
@@ -1632,7 +1554,6 @@ fn parse_source() {
         }
         i++;
     }
-    // As Swift's sourceLines: the last line is there also when it is empty.
     LN.push(Line { s, SRC.len });
     let nlines = LN.len;
     var body = 0;
@@ -1658,7 +1579,6 @@ fn parse_source() {
     build_frames(body_start);
 }
 
-// The plain text of inline events lo..hi: math as LaTeX, markup removed.
 fn plain_inline(out: u8[>..]&, lo: i64, hi: i64) {
     var i = lo;
     while i < hi {
@@ -1673,11 +1593,9 @@ fn plain_inline(out: u8[>..]&, lo: i64, hi: i64) {
     }
 }
 
-// The plain text of a block's inline content (heading, paragraph).
 fn plain_block(out: u8[>..]&, e: i64) { plain_inline(out, e + 1, EV[e].end - 1); }
 
 fn build_frames(body_start: i64) {
-    // Pending frames: kind, heading event, body range, heading range.
     var pk: i64[>..] = [];
     var ph: i64[>..] = [];
     var plo: i64[>..] = [];
@@ -1716,7 +1634,6 @@ fn build_frames(body_start: i64) {
         let hs1 = if kind == F_TITLE { body_start } else { EV[ph[k]].s1 };
         var s1 = SRC.len;
         if k + 1 < pk.len { s1 = EV[ph[k + 1]].s0; }
-        // The id: a slug of the title, unique in the document.
         let io = S.len;
         slug(S, sp_text(title));
         if S.len == io { format(S, "frame-", FR.len + 1); }
@@ -1755,7 +1672,6 @@ fn build_frames(body_start: i64) {
     }
 }
 
-// The document title: the front matter title, or the first frame title.
 fn doc_title() -> u8[:] {
     let t = meta("title");
     if t.len > 0 { return t; }
@@ -1763,8 +1679,6 @@ fn doc_title() -> u8[:] {
     return "Untitled";
 }
 
-// Collects the raw text of the divisions of one kind in a frame, at any
-// depth, separated by blank lines.
 fn frame_raw(out: u8[>..]&, f: Frame, kind: i64) {
     let start = out.len;
     var i = f.lo;
