@@ -6,7 +6,7 @@ export const announced: string[] = [];
 export const picked: { files: File[] } = { files: [] };
 
 const uiStub = {
-    announce: (text: string): void => { announced.push(text); },
+    announce: (text: string | null | undefined): void => { if (text) announced.push(text); },
     attachMenu: (button: HTMLElement, items: Real.MenuItems): void => { menus[button.id] = items; },
     closeMenu: (): void => {},
     alertBox: async (): Promise<void> => {},
