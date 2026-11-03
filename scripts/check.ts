@@ -1,4 +1,7 @@
 import { resolve } from "node:path";
+import { requirePinnedBun } from "./bun-pin.ts";
+
+requirePinnedBun();
 
 const root = resolve(import.meta.dir, "..");
 

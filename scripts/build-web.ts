@@ -2,9 +2,13 @@ import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync } from "no
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { requirePinnedBun } from "./bun-pin.ts";
+
 const root = resolve(import.meta.dir, "..");
-const VENDORED_CORE = resolve(root, "web/marklove.mjs");
-const VENDORED_CORE_FROM_BUNDLE = "./marklove.mjs";
+const CORE_IMPORT = /(["'])[^"'\n]*marklove\.mjs\1/g;
+const CORE_FROM_BUNDLE = '"./marklove.mjs"';
+
+requirePinnedBun();
 
 interface Bundle {
     entry: string;
@@ -26,22 +30,12 @@ async function bundle(b: Bundle, outdir: string): Promise<string> {
         target: "browser",
         format: b.format,
         minify: false,
-        plugins: [
-            {
-                name: "vendored-core",
-                setup(build) {
-                    build.onResolve({ filter: /marklove\.mjs$/ }, (args) => {
-                        if (resolve(args.resolveDir, args.path) !== VENDORED_CORE) return undefined;
-                        return { path: VENDORED_CORE_FROM_BUNDLE, external: true };
-                    });
-                },
-            },
-        ],
+        external: ["*/marklove.mjs"],
     });
     if (!result.success) throw new Error(result.logs.map(String).join("\n"));
     const file = result.outputs[0];
     if (file === undefined) throw new Error("No output for " + b.entry);
-    return await file.text();
+    return (await file.text()).replaceAll(CORE_IMPORT, CORE_FROM_BUNDLE);
 }
 
 const check = process.argv.includes("--check");

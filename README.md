@@ -26,6 +26,8 @@ Then open <http://localhost:8000/>. This server has no `/shared/kowalski.css`. F
 
 The app is TypeScript in `src/`. [Bun](https://bun.sh) installs the packages, bundles the code and runs the tests. Run `bun install` once.
 
+Use Bun 1.4.4. The `packageManager` field in `package.json` pins this version. Another Bun version gives different bundles, so `bun run build:web` and `bun run check` stop when the version is different.
+
 The repository contains the built files `web/app.js`, `web/runtime.js` and `web/article.js`. Build them again after you change a file in `src/`:
 
 ```sh
