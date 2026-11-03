@@ -8,9 +8,9 @@ Source: src/voice.ts at the branch head. Read only.
 - R2: A failed download can be tried again. — src/panels.ts:140
 - R3: Delete the Voice removes the voice from this browser. — src/panels.ts:147
 
-## Bugs
+## Fixed
 
-- B1: Delete the Voice during a download leaves the voice loaded, because the download sets the voice after the delete. — tests/voice_state.test.ts fails on the branch head when the test is not marked failing
+- B1: Delete the Voice during a download cancels the download, so the voice stays removed. — tests/voice_state.test.ts
 
 ## Machine voice
 
@@ -19,15 +19,15 @@ final:
 
 | state | event | guard | next | req | source |
 |---|---|---|---|---|---|
-| unloaded | load | | loading | R1 | src/voice.ts:54 |
-| loading | load | | loading | R1 | src/voice.ts:75 |
-| loading | loaded | | ready | R1 | src/voice.ts:70 |
-| loading | failed | | unloaded | R2 | src/voice.ts:72 |
-| loading | remove | | unloaded | R3 | src/voice.ts:86 |
-| ready | load | | ready | R1 | src/voice.ts:52 |
-| ready | remove | | unloaded | R3 | src/voice.ts:86 |
-| unloaded | remove | | unloaded | R3 | src/voice.ts:86 |
-| unloaded | loaded | | ready | | src/voice.ts:70 |
-| unloaded | failed | | unloaded | R2 | src/voice.ts:72 |
-| ready | loaded | | ready | | src/voice.ts:70 |
-| ready | failed | | ready | R2 | src/voice.ts:72 |
+| unloaded | load | | loading | R1 | src/voice.ts:56 |
+| loading | load | | loading | R1 | src/voice.ts:78 |
+| loading | loaded | | ready | R1 | src/voice.ts:74 |
+| loading | failed | | unloaded | R2 | src/voice.ts:76 |
+| loading | remove | | unloaded | R3 | src/voice.ts:90 |
+| ready | load | | ready | R1 | src/voice.ts:53 |
+| ready | remove | | unloaded | R3 | src/voice.ts:90 |
+| unloaded | remove | | unloaded | R3 | src/voice.ts:90 |
+| unloaded | loaded | | unloaded | R3 | src/voice.ts:73 |
+| unloaded | failed | | unloaded | R2 | src/voice.ts:76 |
+| ready | loaded | | ready | | src/voice.ts:73 |
+| ready | failed | | ready | R2 | src/voice.ts:76 |

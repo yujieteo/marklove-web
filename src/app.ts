@@ -341,9 +341,13 @@ async function flushSave(): Promise<void> {
     if (!p || readOnly()) return;
     const t = E.text();
     if (p.markdown === t) return;
+    const saved = p.markdown;
     p.markdown = t;
     try { await S.saveProject(p); }
-    catch (e) { announce("Marklove could not save the change. " + errorMessage(e)); }
+    catch (e) {
+        if (p.markdown === t) p.markdown = saved;
+        announce("Marklove could not save the change. " + errorMessage(e));
+    }
 }
 
 function autoVersion(): void {

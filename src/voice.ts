@@ -47,10 +47,12 @@ function toNarrator(v: unknown): Narrator {
 
 let tts: Narrator | null = null;
 let loading: Promise<Narrator> | null = null;
+let generation = 0;
 
 export function load(progress?: (fraction: number) => void): Promise<Narrator> {
     if (tts) return Promise.resolve(tts);
     if (!loading) {
+        const started = generation;
         loading = (async () => {
             const lib: unknown = await import(KOKORO);
             if (!isRecord(lib) || typeof lib["KokoroTTS"] !== "function") throw new Error("The voice library did not load.");
@@ -67,9 +69,11 @@ export function load(progress?: (fraction: number) => void): Promise<Narrator> {
                     if (progress) progress(a / b);
                 },
             });
-            tts = toNarrator(model);
-            return tts;
-        })().catch((e: unknown) => { loading = null; throw e; });
+            const narrator = toNarrator(model);
+            if (started !== generation) throw new Error("The voice was removed.");
+            tts = narrator;
+            return narrator;
+        })().catch((e: unknown) => { if (started === generation) loading = null; throw e; });
     }
     return loading;
 }
@@ -83,6 +87,7 @@ export async function installed(): Promise<boolean> {
 }
 
 export async function remove(): Promise<void> {
+    generation++;
     tts = null;
     loading = null;
     try { await caches.delete(CACHE); } catch { return; }

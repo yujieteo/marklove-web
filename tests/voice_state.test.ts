@@ -24,10 +24,10 @@ test("load gives a narrator when KokoroTTS is a class", async () => {
     await Voice.remove();
 });
 
-test.failing("voice.sm.md row loading/remove: the voice stays removed when remove runs during the download", async () => {
+test("voice.sm.md row loading/remove: the voice stays removed when remove runs during the download", async () => {
     const loading = Voice.load();
     await Voice.remove();
     releaseModel();
-    await loading;
+    await expect(loading).rejects.toThrow("The voice was removed.");
     expect(await Voice.installed()).toBe(false);
 });

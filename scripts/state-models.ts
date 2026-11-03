@@ -12,8 +12,8 @@ interface Model {
 }
 
 const MODELS: readonly Model[] = [
-    { machine: "docs/state/voice.sm.md", covers: ["src/voice.ts"], hash: "c4b74c885b0968980b498a07ca61d45db7c66dc68c4db8a2cdabbd6d5392d131" },
-    { machine: "docs/state/project-save.sm.md", covers: ["src/app.ts"], hash: "b858b5cd098231ffe1c2d59fbe3691771efcf4405d2d158a03a66aab7cbc7a03" },
+    { machine: "docs/state/voice.sm.md", covers: ["src/voice.ts"], hash: "48369cb4eb17277e6bec63a4c5cd358645f2f4ff30c049a037539b5fe4bc96e7" },
+    { machine: "docs/state/project-save.sm.md", covers: ["src/app.ts"], hash: "d7cc91b6a6ce7d314091c1964d258c1405b57d64f053919dbed588dbbf3cfd55" },
 ];
 
 function hashOf(model: Model): string {

@@ -2841,10 +2841,12 @@ function toNarrator(v) {
 }
 var tts = null;
 var loading = null;
+var generation = 0;
 function load3(progress) {
   if (tts)
     return Promise.resolve(tts);
   if (!loading) {
+    const started = generation;
     loading = (async () => {
       const lib = await import(KOKORO);
       if (!isRecord(lib) || typeof lib["KokoroTTS"] !== "function")
@@ -2869,10 +2871,14 @@ function load3(progress) {
             progress(a / b);
         }
       });
-      tts = toNarrator(model);
-      return tts;
+      const narrator = toNarrator(model);
+      if (started !== generation)
+        throw new Error("The voice was removed.");
+      tts = narrator;
+      return narrator;
     })().catch((e) => {
-      loading = null;
+      if (started === generation)
+        loading = null;
       throw e;
     });
   }
@@ -2889,6 +2895,7 @@ async function installed() {
   }
 }
 async function remove() {
+  generation++;
   tts = null;
   loading = null;
   try {
@@ -4725,10 +4732,13 @@ async function flushSave() {
   const t = text2();
   if (p.markdown === t)
     return;
+  const saved = p.markdown;
   p.markdown = t;
   try {
     await saveProject(p);
   } catch (e) {
+    if (p.markdown === t)
+      p.markdown = saved;
     announce("Marklove could not save the change. " + errorMessage3(e));
   }
 }

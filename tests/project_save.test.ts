@@ -45,7 +45,7 @@ async function openFromMenu(label: string): Promise<void> {
     await settle();
 }
 
-test.failing("project-save.sm.md row saving/save_failed: an edit whose save failed is still there when the project opens again", async () => {
+test("project-save.sm.md row saving/save_failed: an edit whose save failed is still there when the project opens again", async () => {
     dom.textarea.key("x");
     expect(E.text()).toBe("lpha\n");
     failSaves.remaining = 1;
