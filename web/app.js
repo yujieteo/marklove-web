@@ -4522,7 +4522,7 @@ function showProjectName(name) {
 async function openProject(id, { preview = false } = {}) {
   if (state.project) {
     if (!await flushSave())
-      return;
+      return false;
     if (state.project.id !== id) {
       await saveVersion({ auto: true });
       saveEditorState();
@@ -4530,7 +4530,7 @@ async function openProject(id, { preview = false } = {}) {
   }
   const p = await project(id);
   if (!p)
-    return;
+    return false;
   state.project = p;
   state.assets = await assetBlobs(id);
   state.assetURLs = urlsFor(state.assets);
@@ -4552,6 +4552,7 @@ async function openProject(id, { preview = false } = {}) {
     showPreview();
   else
     showEdit(false);
+  return true;
 }
 function saveEditorState() {
   if (!state.project)
@@ -4573,8 +4574,8 @@ function updatePlaceholder() {
 async function newProject() {
   const p = await createProject({ name: "Untitled", markdown: "" });
   await firstVersion(p, `Create project “${p.name}”`);
-  await openProject(p.id);
-  focus();
+  if (await openProject(p.id))
+    focus();
 }
 async function firstVersion(p, message) {
   if (!settings.gitEnabled || tooLarge(p.markdown))
@@ -4641,10 +4642,8 @@ async function importFiles() {
       await alertBox(`Marklove could not import “${f.name}”. ${errorMessage3(e)}`);
     }
   }
-  if (last) {
-    await openProject(last.id);
+  if (last && await openProject(last.id))
     announce(`Imported “${last.name}”.`);
-  }
 }
 async function deleteProject2(p) {
   const choice = await confirmBox({

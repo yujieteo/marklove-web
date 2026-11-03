@@ -23,7 +23,7 @@ export interface PanelApp {
     applySettings(): void;
     openSettings(): void;
     findSyntaxChanged(): void;
-    openProject(id: string): Promise<void>;
+    openProject(id: string): Promise<boolean>;
     newProject(): Promise<void>;
     importFiles(): Promise<void>;
     openTour(): Promise<void>;

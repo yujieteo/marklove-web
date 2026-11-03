@@ -174,13 +174,13 @@ function showProjectName(name: string): void {
     document.title = name + " – Marklove";
 }
 
-async function openProject(id: string, { preview = false }: { preview?: boolean } = {}): Promise<void> {
+async function openProject(id: string, { preview = false }: { preview?: boolean } = {}): Promise<boolean> {
     if (state.project) {
-        if (!(await flushSave())) return;
+        if (!(await flushSave())) return false;
         if (state.project.id !== id) { await saveVersion({ auto: true }); saveEditorState(); }
     }
     const p = await S.project(id);
-    if (!p) return;
+    if (!p) return false;
     state.project = p;
     state.assets = await S.assetBlobs(id);
     state.assetURLs = urlsFor(state.assets);
@@ -198,6 +198,7 @@ async function openProject(id: string, { preview = false }: { preview?: boolean 
     if (F.find.open) F.refresh();
     await refreshList();
     if (preview || readOnly()) showPreview(); else showEdit(false);
+    return true;
 }
 
 function saveEditorState(): void {
@@ -216,8 +217,7 @@ function updatePlaceholder(): void { $("placeholder").hidden = E.text().length >
 async function newProject(): Promise<void> {
     const p = await S.createProject({ name: "Untitled", markdown: "" });
     await firstVersion(p, `Create project “${p.name}”`);
-    await openProject(p.id);
-    E.focus();
+    if (await openProject(p.id)) E.focus();
 }
 
 async function firstVersion(p: Project, message: string): Promise<void> {
@@ -266,7 +266,7 @@ async function importFiles(): Promise<void> {
             }
         } catch (e) { await alertBox(`Marklove could not import “${f.name}”. ${errorMessage(e)}`); }
     }
-    if (last) { await openProject(last.id); announce(`Imported “${last.name}”.`); }
+    if (last && await openProject(last.id)) announce(`Imported “${last.name}”.`);
 }
 
 async function deleteProject(p: Project): Promise<boolean> {

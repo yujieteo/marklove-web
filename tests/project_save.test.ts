@@ -1,7 +1,7 @@
 import { test, expect, mock } from "bun:test";
 import { installDom, fakeDocument, FakeElement } from "./fakedom.ts";
 import { storeStub, failSaves } from "./app_stubs/store.ts";
-import { uiModule, menuItems } from "./app_stubs/ui.ts";
+import { uiModule, menuItems, announced, picked } from "./app_stubs/ui.ts";
 import { previewModule } from "./app_stubs/preview.ts";
 import { findStub } from "./app_stubs/find.ts";
 import { exportStub } from "./app_stubs/export.ts";
@@ -70,4 +70,22 @@ test("project-save.sm.md row dirty/open_other: when the storage is full, the swi
     expect(E.text()).toBe("beta\n");
     await openFromMenu("A");
     expect(E.text()).toBe("pha\n");
+});
+
+test("project-save.sm.md row saving/save_failed: an import does not say that it opened the project when the save failed", async () => {
+    dom.textarea.key("x");
+    expect(E.text()).toBe("ha\n");
+    failSaves.remaining = 1;
+    picked.files = [new File(["# Notes\n"], "notes.md", { type: "text/markdown" })];
+    announced.length = 0;
+    await openFromMenu("Import Markdown or ZIP…");
+    expect(E.text()).toBe("ha\n");
+    expect(announced.some((t) => t.startsWith("Imported"))).toBe(false);
+    expect(announced.some((t) => t.startsWith("Marklove could not save the change."))).toBe(true);
+    expect(failSaves.remaining).toBe(0);
+    announced.length = 0;
+    await openFromMenu("Import Markdown or ZIP…");
+    expect(E.text()).toBe("# Notes\n");
+    expect(announced).toContain("Imported “notes”.");
+    picked.files = [];
 });

@@ -2,15 +2,17 @@ import type * as Real from "../../src/ui.ts";
 import { FakeElement } from "../fakedom.ts";
 
 const menus: Record<string, Real.MenuItems> = {};
+export const announced: string[] = [];
+export const picked: { files: File[] } = { files: [] };
 
 const uiStub = {
-    announce: (): void => {},
+    announce: (text: string): void => { announced.push(text); },
     attachMenu: (button: HTMLElement, items: Real.MenuItems): void => { menus[button.id] = items; },
     closeMenu: (): void => {},
     alertBox: async (): Promise<void> => {},
     confirmBox: async <T>(): Promise<T | null> => null,
     download: (): void => {},
-    pickFile: async (): Promise<File[]> => [],
+    pickFile: async (): Promise<File[]> => picked.files,
     copyText: async (): Promise<boolean> => true,
     isMac: false,
     cmdKey: "Ctrl+",

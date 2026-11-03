@@ -42,7 +42,11 @@ export const storeStub = {
     addVersion: async (): Promise<void> => {},
     addAsset: async (): Promise<void> => {},
     assetName: (_existing: Record<string, unknown>, _folder: string, fileName: string): string => fileName,
-    createProject: async (): Promise<Real.Project> => { throw new Error("unused"); },
+    createProject: async ({ name = "Untitled", markdown = "" }: Real.NewProject): Promise<Real.Project> => {
+        const id = "p" + Object.keys(db).length;
+        db[id] = { id, name, markdown, modified: 0, isDemo: false, isListener: false };
+        return { ...db[id] };
+    },
     deleteProject: async (): Promise<void> => {},
     duplicateProject: async (): Promise<Real.Project> => { throw new Error("unused"); },
     safeFileName: (n: string): string => n,

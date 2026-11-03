@@ -13,7 +13,7 @@ interface Model {
 
 const MODELS: readonly Model[] = [
     { machine: "docs/state/voice.sm.md", covers: ["src/voice.ts"], hash: "48369cb4eb17277e6bec63a4c5cd358645f2f4ff30c049a037539b5fe4bc96e7" },
-    { machine: "docs/state/project-save.sm.md", covers: ["src/app.ts"], hash: "20f770a99515b3bb7b8069ab3fa21f057b010a9df2b5b27ade8033b215c3d760" },
+    { machine: "docs/state/project-save.sm.md", covers: ["src/app.ts"], hash: "424f333c504027d81fc8d6459725cb61d9b40c2ed85ac5ba8454fe5c5224d947" },
 ];
 
 function hashOf(model: Model): string {
