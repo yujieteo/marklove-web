@@ -4,6 +4,10 @@ Marklove for the web. You write one Markdown file, and Marklove makes slides, an
 
 This is a port of the Marklove app for iPhone, iPad and Mac. The core is in [Goose](https://aardappel.github.io/), compiled to C and then to WebAssembly. The core does the parse, the checks, the render to HTML and MathML, the plots, the themes, find and replace, sam and Vim, the ZIP files and the Git history. The core also lays out the PDF pages, the slide images and the video frames as SVG, traces the SVG slides, makes the video timeline and writes the MP4 file. JavaScript does only the page, the browser storage and the browser APIs: canvas, WebCodecs, MediaRecorder and the speech model.
 
+<img src="docs/figures/architecture.svg" width="400" alt="Block diagram. A Markdown file of at most 512 KB goes into the core, which is Goose compiled to C and then to WebAssembly. The core does the parse and checks, HTML and MathML, plots and themes, Find, sam and Vim, the Git history, the page and frame SVG, the ZIP entries and the MP4 header. JavaScript calls the core through the ml_* functions: it sends text and text widths, and gets HTML, SVG and bytes back. JavaScript does the page and editor, IndexedDB, text measurement, canvas, print to PDF, the Kokoro voice, WebCodecs and MediaRecorder. Photos, videos and audio stay in JavaScript as Blobs. The outputs are web pages, EPUB, PDF, PNG and SVG, MP4 and WebM, and the ZIP with .git.">
+
+*The core makes each output. JavaScript gives it the browser APIs and adds the media bytes, which never go into the core.*
+
 All features are free. The web version has no subscription, no purchase and no Pro features.
 
 ## Use
