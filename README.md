@@ -97,7 +97,7 @@ The process replay (`bun run replay`) runs the tests with a capture switch, then
 | `web/demo-peafowl.png` | The photo of the tour project. |
 | `web/style.css`, `src/runtime.ts`, `web/article.css`, `src/article.ts` | The parts of the exported pages, based on Marklove. `web/style.css` and `web/article.css` add the shared interaction rules: press scale, a hover fade only on a fine pointer, and no tap highlight. Thus they differ from the native app. |
 | `scripts/` | The local checks, the bundler and the process replay. |
-| `docs/state/` | The state machines of the voice and the project save, with the proof tests of their bugs. |
+| `docs/state/` | The state machines of the voice and the project save, with the tests of their fixed bugs. |
 | `web/fonts/` | Courier Prime, Courier Prime Sans, Libre Baskerville and KpMath, with their licenses (SIL Open Font License). |
 
 The Kokoro voice uses the web version of [kokoro-js](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) 1.2.1 from jsDelivr. It runs the Kokoro-82M ONNX model (`onnx-community/Kokoro-82M-v1.0-ONNX`, q8) from Hugging Face. Both are under the Apache License 2.0.
