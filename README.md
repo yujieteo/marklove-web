@@ -8,7 +8,7 @@ This is a port of the Marklove app for iPhone, iPad and Mac. The core is in [Goo
 
 *The core makes each output. JavaScript gives it the browser APIs and adds the media bytes, which never go into the core.*
 
-All features are free. The web version has no subscription, no payment and no Pro features.
+All features are free. The web version has no subscription, no purchase and no Pro features.
 
 ## Use
 
