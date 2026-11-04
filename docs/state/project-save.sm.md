@@ -4,13 +4,13 @@ Source: src/app.ts at the branch head. Read only.
 
 ## Requirements
 
-- R1: A project stays in the storage of the browser. — README.md:23
-- R2: An edit is saved after a short pause, and when another project opens. — src/app.ts:321
-- R3: When a save fails, the current project stays open with the edit, and the next save tries again. — src/app.ts:179
+- R1: A project stays in the storage of the browser. (README.md:23)
+- R2: The app saves an edit after a short pause, and when another project opens. (src/app.ts:321)
+- R3: When a save fails, the current project stays open with the edit, and the next save tries again. (src/app.ts:179)
 
 ## Fixed
 
-- B1: A save that fails keeps the text dirty, and the project switch stops, so the edit stays also when each save fails. — tests/project_save.test.ts
+- B1: A save that fails keeps the text dirty, and the project switch stops. Thus the edit stays when each save fails. (tests/project_save.test.ts)
 
 ## Machine save
 
