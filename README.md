@@ -117,7 +117,7 @@ The Kokoro voice uses the web version of [kokoro-js](https://github.com/hexgrad/
 - The Markdown file can have a maximum size of 512 KB. Each Goose data stack has a fixed 8 MB in WebAssembly, and WebAssembly has no guard pages. Thus the core refuses a larger source. No stack can then overwrite other data. The same limit applies to each text that goes into the core, and to each result of Find, Replace, sam, Vim substitution and Vim put. Find and sam keep a maximum of 100000 matches. Marklove does not keep a text that is larger than 512 KB as a version. With Vim mode on and a text larger than 512 KB, Vim goes to Insert mode. Each key goes to the browser until the text is smaller. A long talk is less than 100 KB.
 - Photos, videos and audio stay in JavaScript as Blobs. They never go into the core. The core writes the ZIP and Git entries for them, and JavaScript adds the bytes. The same applies to the encoded video and audio samples: the core writes the MP4 header, and JavaScript adds the samples.
 - The SVG export traces regions with millions of pixels. The core keeps the arrays for these pixels in the C heap, not in a data stack.
-- Encoders: browsers encode AAC only at 44.1 or 48 kHz, so the encoder makes the 24 kHz voice at 48 kHz. Without AAC, the audio is Opus in the MP4 file. Without WebCodecs, MediaRecorder records the video or the podcast in real time as WebM.
+- Encoders: browsers encode AAC only at 44.1 or 48 kHz, so the encoder encodes the 24 kHz voice at 48 kHz. Without AAC, the audio is Opus in the MP4 file. Without WebCodecs, MediaRecorder records the video or the podcast in real time as WebM.
 
 ## Feature parity
 
@@ -151,4 +151,4 @@ The Kokoro voice uses the web version of [kokoro-js](https://github.com/hexgrad/
 | Command line tool and Shortcuts actions | Not possible on the web. A web page cannot add a command to Terminal or to the Shortcuts app. |
 | VoiceOver rotors, Dynamic Type, Bold Text | Not possible on the web. These are Apple system features. The web page uses the zoom, the screen reader and the reduced motion setting of the browser. |
 | Languages other than English | Not yet. The app text is in Xcode string catalogs, and the web version has only the English text. |
-| Marklove Pro payment (StoreKit) | Removed. All features are free. |
+| Marklove Pro purchase (StoreKit) | Removed. All features are free. |
