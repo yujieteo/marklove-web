@@ -1,10 +1,10 @@
 # marklove-web
 
-Marklove for the web. You write one Markdown file, and Marklove makes slides, an article, an EPUB book, subtitles, narration text and packages from it.
+Marklove for the web turns one Markdown file into slides, an article, an EPUB book, subtitles, narration text and packages.
 
-This is a port of the Marklove app for iPhone, iPad and Mac. The core is in [Goose](https://aardappel.github.io/), compiled to C and then to WebAssembly. The core does the parse, the checks, the render to HTML and MathML, the plots, the themes, find and replace, sam and Vim, the ZIP files and the Git history. The core also lays out the PDF pages, the slide images and the video frames as SVG, traces the SVG slides, makes the video timeline and writes the MP4 file. JavaScript does only the page, the browser storage and the browser APIs: canvas, WebCodecs, MediaRecorder and the speech model.
+This is a port of the Marklove app for iPhone, iPad and Mac. The core is in [Goose](https://aardappel.github.io/), compiled to C and then to WebAssembly. The core does the parse, the checks, the render to HTML and MathML, the plots and the themes. It also does find and replace, sam and Vim, the ZIP files and the Git history. The core lays out the PDF pages, the slide images and the video frames as SVG. It traces the SVG slides, makes the video timeline and writes the MP4 file. JavaScript does only the page, the browser storage and the browser APIs: canvas, WebCodecs, MediaRecorder and the speech model.
 
-<img src="docs/figures/architecture.svg" width="400" alt="Block diagram. A Markdown file of at most 512 KB goes into the core, which is Goose compiled to C and then to WebAssembly. The core does the parse and checks, HTML and MathML, plots and themes, Find, sam and Vim, the Git history, the page and frame SVG, the ZIP entries and the MP4 header. JavaScript calls the core through the ml_* functions: it sends text and text widths, and gets HTML, SVG and bytes back. JavaScript does the page and editor, IndexedDB, text measurement, canvas, print to PDF, the Kokoro voice, WebCodecs and MediaRecorder. Photos, videos and audio stay in JavaScript as Blobs. The outputs are web pages, EPUB, PDF, PNG and SVG, MP4 and WebM, and the ZIP with .git.">
+![Block diagram. A Markdown file of at most 512 KB goes into the core, which is Goose compiled to C and then to WebAssembly. The core does the parse and checks, HTML and MathML, plots and themes, Find, sam and Vim, the Git history, the page and frame SVG, the ZIP entries and the MP4 header. JavaScript calls the core through the ml_* functions: it sends text and text widths, and gets HTML, SVG and bytes back. JavaScript does the page and editor, IndexedDB, text measurement, canvas, print to PDF, the Kokoro voice, WebCodecs and MediaRecorder. Photos, videos and audio stay in JavaScript as Blobs. The outputs are web pages, EPUB, PDF, PNG and SVG, MP4 and WebM, and the ZIP with .git.](docs/figures/architecture.svg)
 
 *The core makes each output. JavaScript gives it the browser APIs and adds the media bytes, which never go into the core.*
 
@@ -12,7 +12,7 @@ All features are free. The web version has no subscription, no purchase and no P
 
 ## Use
 
-The `web/` folder is a static site. It needs no server code and no network after it loads. The Kokoro voice is the exception: Settings downloads it (about 90 MB), and the browser keeps it. Narration also needs the network to get kokoro-js from jsDelivr. Copy the folder to any path on a web server, for example `/play/marklove/`, and open `index.html`. The app chrome needs the shared stylesheet `/shared/kowalski.css` at the root of the same server. On teoyujie.org it is there.
+The `web/` folder is a static site. It needs no server code and no network after it loads. The Kokoro voice is the exception: Settings downloads it (about 90 MB), and the browser keeps it. Narration also needs the network to get kokoro-js from jsDelivr. Copy the folder to any path on a web server, for example `/play/marklove/`. Then open `index.html`. The app chrome needs the shared stylesheet `/shared/kowalski.css` at the root of the same server. On teoyujie.org it is there.
 
 To try it on your computer:
 
@@ -58,7 +58,7 @@ The script does 2 steps:
 bun run test
 ```
 
-The tests use the built core through `src/core.ts`. The project ZIP test also runs `git fsck` on the exported history when Git is installed.
+The tests use the built core through `src/core.ts`. The project ZIP test also runs `git fsck` on the exported history when Git is on your computer.
 
 Before a review, run all local checks:
 
@@ -66,9 +66,19 @@ Before a review, run all local checks:
 bun run check
 ```
 
-The checks are: the type check (`tsc --noEmit`), the lint rules (no comments, no `any`, no type assertions), the dead-code check (knip), the state model hashes, the web bundles, the tests, the page size budget, a build of the generated C with the address and undefined-behavior sanitizers, and the process replay.
+The checks are:
 
-The process replay (`bun run replay`) runs the tests with a capture switch, then gives each captured call to the base commit and to your working tree, in separate copies. It also compiles `core/marklove.goose` in both. It fails on each difference. When a change must change an output, run `bun run replay -- --accept` after you read the printed diff.
+- The type check (`tsc --noEmit`).
+- The lint rules (no comments, no `any`, no type assertions).
+- The dead-code check (knip).
+- The state model hashes.
+- The web bundles.
+- The tests.
+- The page size budget.
+- A build of the generated C with the address and undefined-behavior sanitizers.
+- The process replay.
+
+The process replay (`bun run replay`) runs the tests with a capture switch. Then it gives each captured call to the base commit and to your working tree, in separate copies. It also compiles `core/marklove.goose` in both. It fails on each difference. When a change must change an output, run `bun run replay -- --accept` after you read the printed diff.
 
 ## Files
 
@@ -104,10 +114,10 @@ The Kokoro voice uses the web version of [kokoro-js](https://github.com/hexgrad/
 
 ## Limits
 
-- The Markdown file can have a maximum size of 512 KB. Each Goose data stack has a fixed 8 MB in WebAssembly, and WebAssembly has no guard pages. Thus the core refuses a larger source, so that a stack cannot overwrite other data. The same limit applies to each text that goes into the core, and to each result of Find, Replace, sam, Vim substitution and Vim put. Find and sam keep a maximum of 100000 matches. Marklove does not keep a text that is larger than 512 KB as a version. With Vim mode on and a text larger than 512 KB, Vim goes to Insert mode and each key goes to the browser until the text is smaller. A long talk is less than 100 KB.
+- The Markdown file can have a maximum size of 512 KB. Each Goose data stack has a fixed 8 MB in WebAssembly, and WebAssembly has no guard pages. Thus the core refuses a larger source. No stack can then overwrite other data. The same limit applies to each text that goes into the core, and to each result of Find, Replace, sam, Vim substitution and Vim put. Find and sam keep a maximum of 100000 matches. Marklove does not keep a text that is larger than 512 KB as a version. With Vim mode on and a text larger than 512 KB, Vim goes to Insert mode. Each key goes to the browser until the text is smaller. A long talk is less than 100 KB.
 - Photos, videos and audio stay in JavaScript as Blobs. They never go into the core. The core writes the ZIP and Git entries for them, and JavaScript adds the bytes. The same applies to the encoded video and audio samples: the core writes the MP4 header, and JavaScript adds the samples.
 - The SVG export traces regions with millions of pixels. The core keeps the arrays for these pixels in the C heap, not in a data stack.
-- Encoders: browsers encode AAC only at 44.1 or 48 kHz, so the 24 kHz voice is encoded at 48 kHz. Without AAC, the audio is Opus in the MP4 file. Without WebCodecs, MediaRecorder records the video or the podcast in real time as WebM.
+- Encoders: browsers encode AAC only at 44.1 or 48 kHz, so the encoder encodes the 24 kHz voice at 48 kHz. Without AAC, the audio is Opus in the MP4 file. Without WebCodecs, MediaRecorder records the video or the podcast in real time as WebM.
 
 ## Feature parity
 
@@ -116,7 +126,7 @@ The Kokoro voice uses the web version of [kokoro-js](https://github.com/hexgrad/
 | Projects: make, rename, duplicate, delete | Yes. The projects are in the browser storage. |
 | Markdown editor with Courier Prime, line count and wrap | Yes. |
 | Source colors in the editor | Yes. |
-| Save each change at once, recovery of text that is not saved | Yes. Each change goes to the browser storage. |
+| Save each change at once, recovery of unsaved text | Yes. Each change goes to the browser storage. |
 | Insert menu (Slide, Photo or Video, Equation, Speaker Notes, Pause, Title and Details) | Yes. |
 | Equation preview with spoken text | Yes. |
 | Find and Replace: Sam, Vim and plain text, the sam command line | Yes. |
@@ -128,7 +138,7 @@ The Kokoro voice uses the web version of [kokoro-js](https://github.com/hexgrad/
 | Listener Preview | Yes. |
 | Themes and accent colors | Yes. |
 | Versions: automatic commits with commit messages, changes, restore | Yes. The versions are in the browser storage. The project ZIP holds them as a real `.git` history. |
-| Import a project ZIP | Yes. The `.git` history in the ZIP is not imported: the project starts with a new history. |
+| Import a project ZIP | Yes. The app does not import the `.git` history in the ZIP: the project starts with a new history. |
 | The tour and the welcome | Yes. |
 | Export: interactive web page, article web page, EPUB | Yes. |
 | Export: article Markdown, revised Markdown, narration script, transcript, subtitles, prompt text | Yes. |
