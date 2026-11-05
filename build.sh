@@ -1,28 +1,28 @@
 #!/bin/sh
 set -eu
 
-here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+here=$(CDPATH="" cd -- "$(dirname -- "$0")" && pwd)
 goose=${GOOSE:-goose}
 emcc=${EMCC:-emcc}
-out=${OUT:-"$here/build"}
-mkdir -p "$out"
+out=${OUT:-"${here}/build"}
+mkdir -p "${out}"
 
-"$goose" -q -o "$out/marklove.c" "$here/core/marklove.goose" --standalone \
-    --include io.h --header "$out/marklove.h"
+"${goose}" -q -o "${out}/marklove.c" "${here}/core/marklove.goose" --standalone \
+    --include io.h --header "${out}/marklove.h"
 
 widen_pointer_fields_to_8_bytes() {
     perl -pi -e 'if (/^typedef struct \{.*\*.*\} \w+;$/) { s/([A-Za-z_][\w ]*?\s*\*+)\s*(\w+);/union { $1$2; uint64_t gs_w_$2; };/g }' "$@"
 }
-widen_pointer_fields_to_8_bytes "$out/marklove.c" "$out/marklove.h"
+widen_pointer_fields_to_8_bytes "${out}/marklove.c" "${out}/marklove.h"
 
-exports=$(sed -n 's/^.*[[:space:]]\(ml_[a-z0-9_]*\)(.*$/_\1/p' "$out/marklove.h" | sort -u | tr '\n' ',')
+exports=$(sed -n 's/^.*[[:space:]]\(ml_[a-z0-9_]*\)(.*$/_\1/p' "${out}/marklove.h" | sort -u | tr '\n' ',')
 
-"$emcc" "$out/marklove.c" -I "$here/core" -O2 \
+"${emcc}" "${out}/marklove.c" -I "${here}/core" -O2 \
     -DGS_STACK_RESERVE='(8ull<<20)' -DGS_STACK_GAP=65536 \
     -Wl,--wrap=mmap -Wl,--wrap=munmap -sMAXIMUM_MEMORY=4GB -sSTACK_SIZE=4MB \
     -sMODULARIZE -sEXPORT_ES6 -sENVIRONMENT=web,node -sALLOW_MEMORY_GROWTH \
     -sEXPORTED_FUNCTIONS="_malloc,_free,_goose_init,_ml_in_alloc,_ml_pack_import_arg,_ml_trace_arg,${exports%,}" \
     -sEXPORTED_RUNTIME_METHODS=HEAPU8 \
-    -o "$here/web/marklove.mjs"
+    -o "${here}/web/marklove.mjs"
 
 echo "Built web/marklove.mjs and web/marklove.wasm"
