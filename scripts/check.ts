@@ -19,6 +19,7 @@ const STEPS: readonly Step[] = [
     { name: "tests", cmd: ["bun", "scripts/test.ts"] },
     { name: "page budget", cmd: ["bun", "scripts/budget.ts"] },
     { name: "C sanitizers", cmd: ["sh", "scripts/sanitize.sh"] },
+    { name: "C warnings", cmd: ["sh", "scripts/c-warnings.sh"] },
     { name: "process replay", cmd: ["bun", "scripts/replay.ts"] },
 ];
 
