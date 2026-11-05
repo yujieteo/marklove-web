@@ -1,8 +1,6 @@
-// Runs pinned shellcheck with every optional rule over the committed shell
-// scripts: files ending in .sh plus files whose first line names sh, bash or ksh.
 import { resolve } from "node:path";
 
-const VERSION = "0.11.0.1"; // shellcheck-py release that bundles shellcheck 0.11.0
+const VERSION = "0.11.0.1";
 const root = resolve(import.meta.dir, "..");
 const SHELL_LINE = /^#!\s*(?:\S*\/)?(?:env\s+(?:-\S+\s+)*)?(?:sh|bash|ksh)(?:\s|$)/;
 
