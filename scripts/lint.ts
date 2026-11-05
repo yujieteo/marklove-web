@@ -2,6 +2,7 @@ import ts from "typescript";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { findComments } from "./comments.ts";
+import { checkJpl } from "./jpl.ts";
 
 const root = resolve(import.meta.dir, "..");
 
@@ -48,6 +49,8 @@ for (const file of files) {
         visit(sf);
     }
 }
+
+for (const p of checkJpl(root)) problems.push(p);
 
 if (problems.length > 0) {
     console.log(problems.join("\n"));
