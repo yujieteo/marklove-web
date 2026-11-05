@@ -69,7 +69,7 @@ bun run check
 The checks are:
 
 - The type check (`tsc --noEmit`).
-- The lint rules (no comments, no `any`, no type assertions).
+- The lint rules (no comments, no `any`, no type assertions), and two rules of the JPL "Power of 10" in the Goose (`core/`) and TypeScript files: no function that can call itself (rule 1) and no function over 60 lines (rule 4). `scripts/jpl.ts` holds two lists of functions that already broke a rule, `JPL_RECURSIVE_FUNCTIONS` and `JPL_LONG_FUNCTIONS` (with their length). The lists only shrink: a new offender fails, and so does an entry that is fixed or now shorter, until you remove or lower it. `bun scripts/jpl.ts --list` prints the entries for the current code.
 - The dead-code check (knip).
 - The state model hashes.
 - The web bundles.
