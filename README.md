@@ -76,7 +76,7 @@ The checks are:
 - The tests.
 - The page size budget.
 - A build of the generated C with the address and undefined-behavior sanitizers.
-- A compile of the generated C with `-Wall -Wextra -Wpedantic -Werror`, with the code-generator warnings off (unused variables, functions, parameters, and unterminated string initializers), and the analyser with its dead-store check off. The analyser findings must match `scripts/c-analyzer-known.txt` exactly: a new finding fails, and a listed finding that no longer occurs also fails, so the list only shrinks. Run `sh scripts/c-warnings.sh --print` to see the current findings.
+- A compile of the generated C with `-Wall -Wextra -Wpedantic -Werror`, with the code-generator warnings off (unused variables, functions, parameters, unused-but-set variables, unterminated string initializers, unused labels, and extraneous parentheses around equality), and the analyser with its dead-store check off. The analyser findings must match `scripts/c-analyzer-known.txt` exactly: a new finding fails, and a listed finding that no longer occurs also fails, so the list only shrinks. Run `sh scripts/c-warnings.sh --print` to see the current findings.
 - The process replay.
 
 The process replay (`bun run replay`) runs the tests with a capture switch. Then it gives each captured call to the base commit and to your working tree, in separate copies. It also compiles `core/marklove.goose` in both. It fails on each difference. When a change must change an output, run `bun run replay -- --accept` after you read the printed diff.

@@ -7,11 +7,12 @@ trap 'rm -rf "$out"' EXIT
 known="$here/scripts/c-analyzer-known.txt"
 
 "$goose" -q -o "$out/marklove.c" "$here/core/marklove.goose" --standalone \
-    --include io.h --header "$out/marklove.h"
+    --include io.h --header "$out/marklove.h" 2>"$out/goose.log" || { cat "$out/goose.log"; exit 1; }
 
 cc -c -o /dev/null -Wall -Wextra -Wpedantic -Werror \
     -Wno-unused-variable -Wno-unused-function -Wno-unused-parameter \
     -Wno-unused-but-set-variable -Wno-unterminated-string-initialization \
+    -Wno-unused-label -Wno-parentheses-equality \
     '-DGS_STACK_RESERVE=(8ull<<20)' -DGS_STACK_GAP=65536 \
     -I "$here/core" -I "$out" "$out/marklove.c"
 
